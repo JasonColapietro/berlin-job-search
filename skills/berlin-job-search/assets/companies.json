@@ -1,0 +1,299 @@
+[
+  {
+    "name": "GALVANY",
+    "ats": "ashby",
+    "slug": "galvany",
+    "career_page": "https://jobs.ashbyhq.com/galvany",
+    "city": "Berlin",
+    "description": "Climate-tech company building software for residential energy systems.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Raisin",
+    "ats": "greenhouse",
+    "slug": "raisin",
+    "career_page": "https://job-boards.greenhouse.io/raisin",
+    "city": "Berlin",
+    "description": "Fintech platform for savings and investment products.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Parloa",
+    "ats": "greenhouse",
+    "slug": "parloa",
+    "career_page": "https://job-boards.greenhouse.io/parloa",
+    "city": "Berlin",
+    "description": "Conversational-AI company building enterprise customer-service agents.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "deepset",
+    "ats": "ashby",
+    "slug": "deepsetai",
+    "career_page": "https://jobs.ashbyhq.com/deepsetai",
+    "city": "Berlin",
+    "description": "AI company behind Haystack and an enterprise platform for custom AI systems.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Hive",
+    "ats": "greenhouse",
+    "slug": "hive",
+    "career_page": "https://job-boards.greenhouse.io/hive",
+    "city": "Berlin",
+    "description": "Commerce-operations technology company providing fulfillment software and services.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "trawa",
+    "ats": "ashby",
+    "slug": "trawa",
+    "career_page": "https://jobs.ashbyhq.com/trawa",
+    "city": "Berlin",
+    "description": "Energy-tech company building a digital renewable-energy management platform.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Cortea AI",
+    "ats": "ashby",
+    "slug": "cortea",
+    "career_page": "https://jobs.ashbyhq.com/cortea",
+    "city": "Berlin",
+    "description": "AI company building specialized agents for professional audit firms.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "VREY",
+    "ats": "ashby",
+    "slug": "VREY",
+    "career_page": "https://jobs.ashbyhq.com/VREY",
+    "city": "Berlin",
+    "description": "Energy-tech company building software for renewable energy in apartment buildings.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Andercore",
+    "ats": "ashby",
+    "slug": "andercore",
+    "career_page": "https://jobs.ashbyhq.com/andercore",
+    "city": "Berlin",
+    "description": "AI-native industrial trade platform for energy and infrastructure materials.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "praxipal",
+    "ats": "ashby",
+    "slug": "praxipal",
+    "career_page": "https://jobs.ashbyhq.com/praxipal",
+    "city": "Berlin",
+    "description": "Healthcare-AI company automating administrative work for medical practices.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "dltHub",
+    "ats": "workable",
+    "slug": "dlthub",
+    "career_page": "https://apply.workable.com/dlthub",
+    "city": "Berlin",
+    "description": "Data-infrastructure company building open-source and AI-native data tooling.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Juna AI",
+    "ats": "personio",
+    "slug": "juna-ai",
+    "career_page": "https://juna-ai.jobs.personio.de",
+    "city": "Berlin",
+    "description": "Industrial-AI company building agents that optimize factory processes.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "ecoplanet",
+    "ats": "personio",
+    "slug": "ecoplanet-green-operations-gmbh",
+    "career_page": "https://ecoplanet-green-operations-gmbh.jobs.personio.de",
+    "city": "Munich",
+    "description": "Energy-management software company with a Munich-based team.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "getquin",
+    "ats": "personio",
+    "slug": "getquin",
+    "career_page": "https://getquin.jobs.personio.de",
+    "city": "Berlin",
+    "description": "Fintech company building a digital wealth platform.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "LiveEO",
+    "ats": "personio",
+    "slug": "liveeo-gmbh",
+    "career_page": "https://liveeo-gmbh.jobs.personio.de",
+    "city": "Berlin",
+    "description": "Space-tech company using satellite data and AI to monitor infrastructure.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "JetBrains",
+    "ats": "greenhouse",
+    "slug": "jetbrains",
+    "career_page": "https://job-boards.greenhouse.io/jetbrains",
+    "city": "Berlin",
+    "description": "Developer-tools company with a Berlin office and software and AI engineering roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "PlayStation",
+    "ats": "greenhouse",
+    "slug": "sonyinteractiveentertainmentglobal",
+    "career_page": "https://job-boards.greenhouse.io/sonyinteractiveentertainmentglobal",
+    "city": "Berlin",
+    "description": "Sony Interactive Entertainment's gaming platform with a Berlin engineering team.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Vercel",
+    "ats": "greenhouse",
+    "slug": "vercel",
+    "career_page": "https://job-boards.greenhouse.io/vercel",
+    "city": "Berlin",
+    "description": "Web and AI cloud platform behind Next.js with a Berlin office.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Figma",
+    "ats": "greenhouse",
+    "slug": "figma",
+    "career_page": "https://job-boards.greenhouse.io/figma",
+    "city": "Berlin",
+    "description": "Collaborative design and product-development platform with a Berlin hub.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Planet Labs",
+    "ats": "greenhouse",
+    "slug": "planetlabs",
+    "career_page": "https://job-boards.greenhouse.io/planetlabs",
+    "city": "Berlin",
+    "description": "Satellite-imaging and geospatial-data company with a Berlin presence.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "commercetools",
+    "ats": "greenhouse",
+    "slug": "commercetools",
+    "career_page": "https://job-boards.greenhouse.io/commercetools",
+    "city": "Berlin",
+    "description": "Enterprise commerce-platform company with a Berlin engineering hub.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Pipedrive",
+    "ats": "lever",
+    "slug": "pipedrive",
+    "career_page": "https://jobs.lever.co/pipedrive",
+    "city": "Berlin",
+    "description": "Customer relationship management software company with listed Berlin roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "JustWatch",
+    "ats": "lever",
+    "slug": "justwatch",
+    "career_page": "https://jobs.lever.co/justwatch",
+    "city": "Berlin",
+    "description": "Streaming guide and entertainment data company with Berlin roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Netlight",
+    "ats": "lever",
+    "slug": "netlight",
+    "career_page": "https://jobs.lever.co/netlight",
+    "city": "Berlin",
+    "description": "Digital transformation consultancy with roles in Berlin and other European cities.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Flink",
+    "ats": "smartrecruiters",
+    "slug": "Flink3",
+    "career_page": "https://careers.smartrecruiters.com/Flink3",
+    "city": "Berlin",
+    "description": "Online grocery and quick-commerce company with Berlin operations and technology roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Delivery Hero",
+    "ats": "smartrecruiters",
+    "slug": "DeliveryHero",
+    "career_page": "https://careers.smartrecruiters.com/DeliveryHero",
+    "city": "Berlin",
+    "description": "Global local-delivery platform headquartered in Berlin.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Zeotap",
+    "ats": "recruitee",
+    "slug": "zeotap",
+    "career_page": "https://zeotap.recruitee.com",
+    "city": "Berlin",
+    "description": "Customer-data platform with a Berlin presence and publicly listed remote hiring.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Octopus Energy",
+    "ats": "lever",
+    "slug": "octoenergy",
+    "career_page": "https://jobs.lever.co/octoenergy",
+    "city": "Munich",
+    "description": "Energy company with public listings for its Germany teams.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Qonto",
+    "ats": "lever",
+    "slug": "qonto",
+    "career_page": "https://jobs.lever.co/qonto",
+    "city": "Berlin",
+    "description": "Business-finance platform with a listed Berlin team.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Berliner Verkehrsbetriebe (BVG)",
+    "ats": "smartrecruiters",
+    "slug": "berlinerverkehrsbetriebebvg1",
+    "career_page": "https://careers.smartrecruiters.com/berlinerverkehrsbetriebebvg1",
+    "city": "Berlin",
+    "description": "Berlin's public transport operator.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "N26",
+    "ats": "greenhouse",
+    "slug": "n26",
+    "career_page": "https://job-boards.greenhouse.io/n26",
+    "city": "Berlin",
+    "description": "Digital bank with a Berlin-based team and current public roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Contentful",
+    "ats": "greenhouse",
+    "slug": "contentful",
+    "career_page": "https://job-boards.greenhouse.io/contentful",
+    "city": "Berlin",
+    "description": "Digital content platform with a Berlin presence and engineering roles.",
+    "verified_at": "2026-10-23"
+  },
+  {
+    "name": "Celonis",
+    "ats": "greenhouse",
+    "slug": "celonis",
+    "career_page": "https://job-boards.greenhouse.io/celonis",
+    "city": "Munich",
+    "description": "Process-intelligence software company with a major Munich office.",
+    "verified_at": "2026-10-23"
+  }
+]

@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible problem with the skill or tools.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include CVs, contact details, application records, credentials or private job data. Use fictional examples.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include the command or workflow and the observed result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Agent, operating system and Python version if relevant.
+    validations:
+      required: false
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use fictional data and remove personal information.
+    validations:
+      required: false

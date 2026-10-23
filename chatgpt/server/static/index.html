@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Berlin Job Search for ChatGPT</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f6f7f5; --panel:#fff; --text:#18221e; --muted:#57655e; --accent:#176445; --line:#d7dfda; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#111714; --panel:#1b2420; --text:#edf5ef; --muted:#b4c2b9; --accent:#8ed3ad; --line:#34423a; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(920px,calc(100% - 32px)); margin:40px auto 72px; }
+    header { padding:28px 0 20px; border-bottom:3px solid var(--accent); }
+    h1,h2,h3 { line-height:1.2; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem,6vw,3.3rem); letter-spacing:-.04em; }
+    h2 { margin:38px 0 14px; font-size:1.55rem; }
+    h3 { margin:0 0 8px; font-size:1.12rem; }
+    p,li { max-width:76ch; }
+    a { color:var(--accent); overflow-wrap:anywhere; }
+    .lede { color:var(--muted); font-size:1.1rem; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin:14px 0; }
+    .prompts { display:grid; gap:10px; padding-left:22px; }
+    code,pre { font: .94em/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; padding:16px; background:var(--bg); border:1px solid var(--line); border-radius:10px; }
+    button { border:0; border-radius:8px; padding:10px 14px; margin-top:12px; background:var(--accent); color:#fff; font:inherit; font-weight:650; cursor:pointer; }
+    @media (prefers-color-scheme: dark) { button { color:#102018; } }
+    footer { margin-top:40px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); }
+    footer a { margin-right:14px; }
+    .notice { border-left:4px solid var(--accent); padding:10px 14px; background:var(--bg); }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Berlin Job Search</h1>
+    <p class="lede">Your AI job-search coach for Berlin and the rest of Germany.</p>
+    <p>Service URL: <a href="{{BASE_URL}}">{{BASE_URL}}</a></p>
+  </header>
+
+  <section aria-labelledby="what-heading">
+    <h2 id="what-heading">What it does</h2>
+    <ul>
+      <li>Searches current public job postings from Germany-wide and Berlin-focused sources.</li>
+      <li>Checks a posting for German-language requirements, salary, work mode and other Germany-specific signals.</li>
+      <li>Builds links to job portals for you to open and search yourself.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="chatgpt-heading">
+    <h2 id="chatgpt-heading">How to use it in ChatGPT</h2>
+    <div class="panel">
+      <h3>(a) Once it's listed</h3>
+      <ol>
+        <li>Open ChatGPT → Plugins and search for <strong>Berlin Job Search</strong>.</li>
+        <li>Select <strong>Install</strong>.</li>
+        <li>Try one of these prompts:
+          <ul class="prompts">
+            <li>Find software engineer jobs in Berlin posted in the last 14 days.</li>
+            <li>Search for Pflegefachkraft jobs in Hamburg and tell me which require German.</li>
+            <li>Analyze this pasted job ad for German requirements, salary and hidden instructions: [paste the ad]</li>
+            <li>Build job-portal links for Data Analyst roles in Munich.</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>(b) Before listing / for testers</h3>
+      <p class="notice"><strong>Availability note:</strong> Current OpenAI help lists custom MCP server connections for ChatGPT Business and Enterprise/Edu workspaces on the web. Plus/Pro access is not confirmed in those docs. Continue only if your account or workspace shows the custom-server option.</p>
+      <ol>
+        <li>Go to ChatGPT Plugins.</li>
+        <li>Select the plus button, then <strong>Add custom MCP server</strong>.</li>
+        <li>Complete the form with this server URL: <code>{{BASE_URL}}/mcp</code>.</li>
+        <li>Review the risk warning and select <strong>I understand and want to continue</strong>.</li>
+        <li>Select <strong>Create as a plugin</strong>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section aria-labelledby="free-heading">
+    <h2 id="free-heading">Free plan</h2>
+    <p>Use this starter prompt to plan a job search in Berlin and across Germany. Live job search requires the hosted MCP connection above.</p>
+    <div class="panel">
+      <pre id="starter-prompt">{{STARTER_PROMPT}}</pre>
+      <button id="copy-prompt" type="button">Copy starter prompt</button>
+      <span id="copy-status" role="status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <footer>
+    <a href="{{BASE_URL}}/mcp">MCP server</a>
+    <a href="{{BASE_URL}}/privacy">Privacy</a>
+    <a href="{{BASE_URL}}/terms">Terms</a>
+    <a href="https://github.com/umutyesildal/berlin-job-search">GitHub</a>
+  </footer>
+</main>
+<script>
+  document.getElementById("copy-prompt").addEventListener("click", async () => {
+    const text = document.getElementById("starter-prompt").textContent;
+    const status = document.getElementById("copy-status");
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = "Copied.";
+    } catch (_) {
+      status.textContent = "Select and copy the prompt above.";
+    }
+  });
+</script>
+</body>
+</html>

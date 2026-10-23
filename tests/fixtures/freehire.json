@@ -1,0 +1,28 @@
+{
+  "meta": {"limit": 3, "offset": 0, "total": 283},
+  "data": [
+    {
+      "public_slug": "software-engineer-157-musarubra-software-india-private-limited-tg5erlfn",
+      "source": "startupjobs",
+      "external_id": ":8475441",
+      "url": "https://startup.jobs/software-engineer-157-musarubra-software-india-8475441?utm_source=freehire.me",
+      "title": "Software Engineer",
+      "company": "157 Musarubra Software India Private Limited",
+      "company_slug": "157-musarubra-software-india-private",
+      "location": "Paderborn, Germany",
+      "description": "<div>\n  <p></p><p><i><b>Job Title:</b></i></p>Software Engineer<p></p><p><b><span>About Skyhigh Security:</span></b></p><p><span>Skyhigh Security is a dynamic, fast-paced, cloud company that is a leader in the security industry.  Our mission is to protect the world’s data, and because of this, we live and breathe security. We value learning at our ",
+      "skills": ["api", "cloud", "cybersecurity", "python"],
+      "work_mode": "onsite",
+      "regions": ["eu"],
+      "countries": ["de"],
+      "cities": ["Paderborn"],
+      "posted_at": "2026-10-17T16:06:12Z",
+      "created_at": "2026-10-17T16:06:12Z",
+      "enrichment": {
+        "category": "software_engineering",
+        "posting_language": "en",
+        "company_type": "product"
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "berlin-job-search",
+  "version": "0.1.0",
+  "description": "Berlin Job Search: find work in Berlin and the rest of Germany with local-first tools and Germany-specific guidance.",
+  "author": {
+    "name": "Umut Yesildal",
+    "url": "https://github.com/umutyesildal"
+  },
+  "homepage": "https://github.com/umutyesildal/berlin-job-search",
+  "repository": "https://github.com/umutyesildal/berlin-job-search",
+  "license": "MIT",
+  "keywords": [
+    "Germany",
+    "job-search",
+    "career",
+    "Berlin",
+    "application"
+  ],
+  "skills": [
+    "./skills/berlin-job-search"
+  ]
+}

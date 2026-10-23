@@ -1,0 +1,36 @@
+{
+  "updated_at": "2026-10-23T14:05:51.275Z",
+  "count": 100,
+  "jobs": [
+    {
+      "id": 17277,
+      "title": "Full Stack Software Engineer (m/w/d)",
+      "company": "Odoo",
+      "location": "Berlin, Berlin, Germany",
+      "url": "https://de.linkedin.com/jobs/view/full-stack-software-engineer-m-w-d-at-odoo-4481901034",
+      "detail_url": "https://daily-berlin-jobs.vercel.app/api/v1/jobs/17277",
+      "role": "Fullstack",
+      "level": "Not specified",
+      "work_mode": "Hybrid",
+      "tech_stack": ["JavaScript", "Python", "SQL"],
+      "posted_date": "2026-10-23",
+      "first_seen_at": "2026-10-23T14:12:32.347623Z",
+      "source": "linkedin"
+    },
+    {
+      "id": 16798,
+      "title": "Senior Infrastructure Engineer (PostgreSQL DBA)",
+      "company": "Workato",
+      "location": "Berlin, Germany; Frankfurt, Germany; Munich, Germany",
+      "url": "https://www.workato.com/careers?gh_jid=8842211002",
+      "detail_url": "https://daily-berlin-jobs.vercel.app/api/v1/jobs/16798",
+      "role": "Platform / DevOps / SRE",
+      "level": "Senior",
+      "work_mode": "On-site",
+      "tech_stack": ["Python", "AWS", "Kubernetes", "Terraform", "SQL"],
+      "posted_date": "2026-09-24",
+      "first_seen_at": "2026-10-23T12:54:04.317387Z",
+      "source": "ats"
+    }
+  ]
+}

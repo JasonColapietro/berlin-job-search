@@ -1,0 +1,45 @@
+{
+  "updated_at": "2026-10-23T14:05:51.275Z",
+  "updated_at_berlin": "2026-10-23 16:05 Europe/Berlin",
+  "job_count": 1505,
+  "latest_update_count": 3,
+  "last_run": {
+    "inserted": 15,
+    "updated": 406,
+    "deleted": 0
+  },
+  "stale": false,
+  "next_expected_window": {
+    "from": "2026-10-24T05:00:00.000Z",
+    "to": "2026-10-24T06:30:00.000Z"
+  },
+  "filters": {
+    "roles": [
+      "Backend",
+      "Data / AI / ML",
+      "Embedded / Firmware / Robotics",
+      "Engineering Leadership",
+      "Frontend",
+      "Fullstack",
+      "Mobile",
+      "Platform / DevOps / SRE",
+      "QA / Test",
+      "Security",
+      "Software Engineering"
+    ],
+    "levels": [
+      "Intern / Working Student",
+      "Junior / Entry",
+      "Lead",
+      "Manager / Head / Director",
+      "Not specified",
+      "Senior",
+      "Staff / Principal"
+    ],
+    "work_modes": [
+      "Hybrid",
+      "On-site",
+      "Remote"
+    ]
+  }
+}

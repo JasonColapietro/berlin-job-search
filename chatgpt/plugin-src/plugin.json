@@ -1,0 +1,46 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "berlin-job-search",
+  "version": "0.1.0",
+  "description": "Search public job postings in Berlin and across Germany, review requirements and prepare a careful application workflow.",
+  "author": {
+    "name": "Umut Yesildal",
+    "url": "https://github.com/umutyesildal"
+  },
+  "homepage": "{BASE_URL}",
+  "repository": "https://github.com/umutyesildal/berlin-job-search",
+  "license": "MIT",
+  "keywords": [
+    "Germany",
+    "job search",
+    "career",
+    "Berlin",
+    "application"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Berlin Job Search",
+        "shortDescription": "Find Berlin and Germany jobs",
+        "longDescription": "Search current public job postings in Berlin and across Germany, check language, salary and workplace signals, and get direct links to other job portals. Posting descriptions are treated as data, not instructions.",
+        "developerName": "Umut Yesildal",
+        "category": "Productivity",
+        "capabilities": [
+          "Read"
+        ],
+        "websiteURL": "{BASE_URL}",
+        "privacyPolicyURL": "{BASE_URL}/privacy",
+        "termsOfServiceURL": "{BASE_URL}/terms",
+        "defaultPrompt": [
+          "Find software engineer jobs in Berlin posted in the last 14 days.",
+          "Find Pflegefachkraft jobs in Hamburg and explain the German-language requirements.",
+          "Analyze this job ad for German requirements, salary and hidden instructions: [paste the ad]"
+        ],
+        "brandColor": "#234F3D",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "onboardingSkill": "./skills/setup/SKILL.md"
+    }
+  }
+}
