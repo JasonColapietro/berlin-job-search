@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Application tracker report</title>
+<style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#17191c;--muted:#606a73;--panel:#f3f5f7;--line:#d7dde2;--accent:#245579}
+@media(prefers-color-scheme:dark){:root{--bg:#171a1e;--fg:#f1f3f5;--muted:#aeb8c1;--panel:#23282e;--line:#3b444d;--accent:#9ec8e4}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 44px}h1{margin:0 0 5px;font-size:30px}h2{margin:28px 0 12px;font-size:19px}p,.muted{color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:22px 0}
+.stat-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px}.stat-card span{display:block;color:var(--muted);font-size:13px}.stat-card strong{display:block;font-size:25px;margin-top:4px}
+.panel{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--bg);overflow-x:auto}.chart{width:100%;height:auto;max-height:290px}.chart-label{fill:var(--fg);font-size:13px}.chart-value,.chart-small{fill:var(--muted);font-size:11px}.chart-bar{fill:var(--accent)}.chart-axis{stroke:var(--line);stroke-width:1}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}th[data-sort]{cursor:pointer;color:var(--accent)}th[data-sort]:hover{text-decoration:underline}.table-wrap{overflow:auto}.table-tools{display:flex;align-items:center;gap:10px;margin:12px 0}.table-tools input{min-width:240px;max-width:420px;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg)}
+a{color:var(--accent)}ul.actions{padding-left:20px}ul.actions li{margin:7px 0}.empty{color:var(--muted);font-style:italic}footer{margin-top:28px;color:var(--muted);font-size:12px}
+@media(max-width:620px){main{padding:20px 14px}.table-tools{align-items:stretch;flex-direction:column}.table-tools input{max-width:none}}
+</style></head>
+<body><main>
+<h1>Application tracker</h1><p class="muted">Offline report generated at __GENERATED__</p>
+<section class="cards" aria-label="Summary statistics">__CARD_HTML__</section>
+<section><h2>Application funnel</h2><div class="panel">__FUNNEL__</div></section>
+<section><h2>Status breakdown</h2><div class="panel"><table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>__STATUS_ROWS__</tbody></table></div></section>
+<section><h2>By source</h2><div class="panel"><table><thead><tr><th>Source</th><th>Tracked</th><th>Applied</th><th>Response rate</th></tr></thead><tbody>__SOURCE_ROWS__</tbody></table></div></section>
+<section><h2>Weekly applications · last 12 weeks</h2><div class="panel">__WEEKLY__</div></section>
+<section><h2>Action needed</h2><div class="panel"><ul class="actions">__ACTIONS__</ul></div></section>
+<section><h2>Applications</h2><div class="panel">__TABLE__</div></section>
+<footer>Generated __GENERATED__. No external resources are loaded.</footer>
+</main>
+<script>
+(()=> {
+const input=document.getElementById("application-filter");
+const table=document.getElementById("applications");
+if(input&&table){
+  input.addEventListener("input",()=>{
+    const needle=input.value.toLocaleLowerCase();
+    for(const row of table.tBodies[0].rows){
+      row.hidden=!row.textContent.toLocaleLowerCase().includes(needle);
+    }
+  });
+  for(const header of table.querySelectorAll("th[data-sort]")){
+    let ascending=true;
+    const sort=()=>{
+      const index=header.cellIndex;
+      const rows=Array.from(table.tBodies[0].rows).filter(row=>!row.classList.contains("empty-row"));
+      rows.sort((left,right)=>{
+        const a=(left.cells[index].dataset.sort||left.cells[index].textContent).toLocaleLowerCase();
+        const b=(right.cells[index].dataset.sort||right.cells[index].textContent).toLocaleLowerCase();
+        return a.localeCompare(b,undefined,{numeric:true})*(ascending?1:-1);
+      });
+      ascending=!ascending;
+      for(const row of rows)table.tBodies[0].appendChild(row);
+    };
+    header.addEventListener("click",sort);
+    header.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();sort();}});
+  }
+}
+})();
+</script></body></html>

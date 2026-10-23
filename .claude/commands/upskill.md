@@ -1,5 +1,4 @@
 ---
-# generated from commands/upskill.md, do not edit.
 description: Find the skills, certificates or language level holding you back, ranked from your target jobs, with a learning plan
 argument-hint: "[optional: one job URL to analyse, or a target role]"
 ---

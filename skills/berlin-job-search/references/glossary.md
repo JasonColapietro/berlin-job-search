@@ -1,8 +1,6 @@
 # German job-ad and contract glossary
 
-> Portions adapted from career-ops (MIT) — see NOTICE.md.
-
-The explanations are practical reading aids, not legal interpretations. Check the complete clause and ask a qualified adviser when a term changes pay, immigration, or termination rights.
+> Practical reading aid, not legal interpretation. Check full clauses and ask a qualified adviser if a term affects pay, immigration or termination. Adapted concepts are credited in NOTICE.md.
 
 | Term | Meaning | What it means for you |
 |---|---|---|
@@ -38,7 +36,7 @@ The explanations are practical reading aids, not legal interpretations. Check th
 | Initiativbewerbung | Unsolicited application | Contact an employer without a specific vacancy; target a team and contribution. |
 | Eintrittstermin | Start date | State earliest realistic availability. |
 | Gehaltsvorstellung | Salary expectation | Usually annual gross salary; state range if requested and define bonus assumptions. |
-| Brutto | Gross pay | Before wage tax and employee contributions. |
+| Brutto / Bruttogehalt | Gross pay / gross salary | Before wage tax and employee contributions; compare annual salary and actual weekly hours. |
 | Netto | Net pay | Take-home amount after deductions; depends on personal circumstances. |
 | Kündigungsfrist | Notice period | The time between termination notice and end date; check contract and statutory rules. |
 | Probezeit | Probationary period | Check duration and notice period; statutory two-week notice can apply for an agreed period up to six months. |
@@ -130,11 +128,12 @@ The explanations are practical reading aids, not legal interpretations. Check th
 | Lohnsteuer | Wage tax | Withholding through payroll; it is not the same as final annual tax liability. |
 | Sozialversicherung | Social insurance | Contributions cover statutory systems; exact deductions depend on pay and status. |
 | Arbeitgeberanteil | Employer contribution | Employer-paid social-insurance share; not additional net pay. |
-| Bruttogehalt | Gross salary | Compare on an annual basis and normalize for weekly hours. |
 | Jahresarbeitszeit | Annual working time | Check how holidays, overtime, and time-account balances are counted. |
 | Gutschrift | Credit / accrued balance | Could refer to time account, expenses, or compensation; ask for the exact ledger. |
 | Abrechnung | Settlement / payroll calculation | Review the document against the contract and ask HR/payroll about discrepancies. |
 
+| Term | Meaning | What it means for you |
+|---|---|---|
 | Arbeitsbescheinigung | Employer statement of employment data | The BA may request it to assess ALG I; check reported dates and pay if something is wrong. |
 | Verfügbarkeit | Availability for work | A condition in ALG I rules; tell the BA about relevant restrictions. |
 | Eigenbemühungen | Your own job-search efforts | Keep a factual record of applications and contacts if the agency requests it. |

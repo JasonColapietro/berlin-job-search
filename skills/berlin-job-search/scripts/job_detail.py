@@ -9,8 +9,8 @@ import urllib.parse
 from html.parser import HTMLParser
 from typing import Any, Optional
 
-from analyze_jd import analyze, strip_html
-from search import USER_AGENT, request_bytes, request_json, salary_text
+from _common import USER_AGENT, json_text, request_bytes, request_json, salary_text, strip_html, write_output
+from analyze_jd import analyze
 
 
 class PageParser(HTMLParser):
@@ -336,7 +336,7 @@ def markdown(detail: dict[str, Any]) -> str:
                 value = ", ".join(str(item) for item in value)
             lines.append("- **{}:** {}".format(label, value or "—"))
     lines.extend(["", "## Description", detail.get("description_text") or "No readable description found.",
-                  "", "## Analysis", "```json", json.dumps(detail["analysis"], ensure_ascii=False, indent=2), "```"])
+                  "", "## Analysis", "```json", json_text(detail["analysis"]), "```"])
     return "\n".join(lines)
 
 
@@ -347,8 +347,8 @@ def main() -> int:
     parser.add_argument("--format", choices=("json", "md"), default="json", metavar="json|md")
     args = parser.parse_args()
     detail = fetch_detail(args.url_or_ba_refnr)
-    output = json.dumps(detail, ensure_ascii=False, indent=2) if args.format == "json" else markdown(detail)
-    print(output)
+    output = json_text(detail) if args.format == "json" else markdown(detail)
+    write_output(output)
     return 0
 
 

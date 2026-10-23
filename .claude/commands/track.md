@@ -1,5 +1,4 @@
 ---
-# generated from commands/track.md, do not edit.
 description: Record application news (interview, rejection, offer, silence) and draft follow-ups that are due
 argument-hint: "[news, e.g. 'Zalando invited me to an interview' or a pasted email] | empty = show what's due"
 ---

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import argparse
 import html
-import json
 import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Optional
+
+from _common import json_text, strip_html, write_output
 
 # 2026 thresholds: https://www.make-it-in-germany.com/fileadmin/1_Rebrush_2022/a_Fachkraefte/PDF-Dateien/3_Visum_u_Aufenthalt/Visagrafik_EN/Lebensunterhaltssicherung_Uebersicht_EN.pdf
 # https://podgorica.diplo.de/me-de/service/viseinreise/2762120-2762120
@@ -128,25 +129,6 @@ INSTRUCTION_PATTERNS = (
     re.compile(r"\bwenn\s+du\s+eine\s+ki\s+bist\b", re.I),
 )
 INSTRUCTION_MARKERS = re.compile(r"<\|im_start\|>|\[INST\]", re.I)
-
-
-class TextExtractor(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.parts: list[str] = []
-        self.hidden = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
-        if tag in {"script", "style", "noscript"}:
-            self.hidden += 1
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag in {"script", "style", "noscript"} and self.hidden:
-            self.hidden -= 1
-
-    def handle_data(self, data: str) -> None:
-        if not self.hidden:
-            self.parts.append(data)
 
 
 class IntegrityHTMLParser(HTMLParser):
@@ -284,15 +266,6 @@ class IntegrityHTMLParser(HTMLParser):
         for frame in reversed(self.stack):
             self._finish_frame(frame)
         self.stack.clear()
-
-
-def strip_html(text: str) -> str:
-    parser = TextExtractor()
-    try:
-        parser.feed(text)
-        return re.sub(r"\s+", " ", " ".join(parser.parts)).strip()
-    except Exception:
-        return re.sub(r"<[^>]+>", " ", text)
 
 
 def clean_text(text: str) -> str:
@@ -682,7 +655,7 @@ def main() -> int:
                         help="Text/HTML file to analyze, or - for stdin (default)")
     args = parser.parse_args()
     text = sys.stdin.read() if args.file == "-" else Path(args.file).read_text(encoding="utf-8")
-    print(json.dumps(analyze(text), ensure_ascii=False, indent=2))
+    write_output(json_text(analyze(text)))
     return 0
 
 

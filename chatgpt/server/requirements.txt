@@ -1,3 +1,0 @@
-mcp==2.3.0
-# Uvicorn 0.54.0 was released 2026-09-25, more than a week before this package snapshot.
-uvicorn==0.54.0

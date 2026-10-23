@@ -3,7 +3,6 @@ import io
 import json
 import sys
 import tempfile
-import time
 import unittest
 from argparse import Namespace
 from datetime import datetime, timedelta, timezone
@@ -86,64 +85,15 @@ class SourceParsingTests(unittest.TestCase):
         jobs = fixture_json("dbj_jobs.json")
         with patch.object(search, "request_json", side_effect=[status, jobs]) as request:
             result = run_search({
-                "query": "software engineer",
-                "city": "Berlin",
+                "what": "software engineer",
+                "where": "Berlin",
                 "days": 3,
-                "sources": ["dailyberlinjobs"],
+                "sources": "dailyberlinjobs",
                 "limit": 10,
-            }, deadline_seconds=5)
+            })
         self.assertEqual(request.call_count, 2)
         self.assertEqual(result["meta"]["sources"]["dailyberlinjobs"]["updated_at"], status["updated_at"])
         self.assertEqual(len(result["jobs"]), 1)
-
-    def test_run_search_keeps_partial_results_when_deadline_skips_next_source(self):
-        job = make_job(
-            "ba", "Python Engineer", "Northstar Example", "Berlin",
-            "https://jobs.example.test/python",
-        )
-        source_fetchers = {
-            "ba": lambda _args: ([job], []),
-            "arbeitnow": lambda _args: ([], []),
-        }
-        with patch.dict(search.SOURCE_FETCHERS, source_fetchers, clear=True), \
-                patch.object(search, "deadline_near", side_effect=[False, True]):
-            result = run_search({
-                "what": "python", "where": "Berlin", "days": 7,
-                "sources": ["ba", "arbeitnow"],
-            }, deadline_seconds=5)
-        self.assertEqual(len(result["jobs"]), 1)
-        self.assertTrue(result["meta"]["sources"]["ba"]["ok"])
-        self.assertEqual(result["meta"]["sources"]["ba"]["count"], 1)
-        self.assertFalse(result["meta"]["sources"]["arbeitnow"]["ok"])
-        self.assertIn("deadline", result["meta"]["sources"]["arbeitnow"]["error"])
-
-    def test_deadline_parse_budget_returns_partial_arbeitnow_results(self):
-        payload = {
-            "data": [
-                {
-                    "title": "Python Engineer {}".format(index),
-                    "company_name": "Fictional Example",
-                    "location": "Berlin",
-                    "url": "https://jobs.example.test/{}".format(index),
-                    "description": "Fictional role builds Python services in Berlin.",
-                    "created_at": "2026-10-20T00:00:00Z",
-                    "tags": ["Python"],
-                }
-                for index in range(300)
-            ],
-        }
-        args = Namespace(
-            what="python", where="Berlin", radius=25, days=14, max_pages=1,
-            with_description=False, remote=False, limit=20,
-        )
-        token = search._SEARCH_DEADLINE.set(time.monotonic() + 10)
-        try:
-            with patch.object(search, "request_json", return_value=payload):
-                jobs, errors = search.fetch_arbeitnow_source(args)
-        finally:
-            search._SEARCH_DEADLINE.reset(token)
-        self.assertEqual(len(jobs), 50)
-        self.assertIn("parsed 50 of 300", errors[0])
 
     def test_daily_berlin_jobs_role_and_level_validation(self):
         filters = fixture_json("dbj_status.json")["filters"]

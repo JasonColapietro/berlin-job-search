@@ -1,5 +1,4 @@
 ---
-# generated from commands/apply.md, do not edit.
 description: Write a tailored German Lebenslauf/Anschreiben or English CV/cover letter for one job, reviewed and rendered to PDF
 argument-hint: "<job URL, tracker id, or company + role>"
 ---

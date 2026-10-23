@@ -1,5 +1,4 @@
 ---
-# generated from commands/report.md, do not edit.
 description: Show how your job search is going - funnel, response rates, sources - and build the offline HTML dashboard
 argument-hint: "[optional: focus, e.g. 'which sources work best']"
 ---

@@ -2,122 +2,33 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import contextvars
-import csv
 import datetime as dt
-import html
 import json
 import os
 import re
 import sys
-import time
-import unicodedata
-import urllib.error
 import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
 
-from analyze_jd import analyze, strip_html
+from _common import (
+    USER_AGENT,
+    canonical_url,
+    csv_text,
+    json_text,
+    normalize_identity as normalized_key,
+    plain,
+    request_bytes,
+    request_json,
+    salary_text,
+    source_date as iso_date,
+    write_output,
+)
+from analyze_jd import analyze
 
-USER_AGENT = "berlin-job-search-skill/0.1 (+https://github.com/umutyesildal/berlin-job-search)"
 DEFAULT_COMPANIES = Path(__file__).resolve().parent.parent / "assets" / "companies.json"
 DEFAULT_SOURCES = ("dailyberlinjobs", "ba", "arbeitnow", "ats", "linkedin")
-_SEARCH_DEADLINE: contextvars.ContextVar[Optional[float]] = contextvars.ContextVar("search_deadline", default=None)
-
-
-def deadline_remaining() -> Optional[float]:
-    deadline = _SEARCH_DEADLINE.get()
-    return None if deadline is None else deadline - time.monotonic()
-
-
-def deadline_near(margin: float = 0.25) -> bool:
-    remaining = deadline_remaining()
-    return remaining is not None and remaining <= margin
-
-
-def _read_response_body(response: Any) -> bytes:
-    if deadline_remaining() is None:
-        return response.read()
-    read_chunk = getattr(response, "read1", None)
-    if not callable(read_chunk):
-        return response.read()
-    chunks = []
-    while True:
-        remaining = deadline_remaining()
-        if remaining is None or remaining <= 0:
-            raise TimeoutError("overall search deadline reached while reading an upstream response")
-        chunk = read_chunk(65536)
-        if not chunk:
-            return b"".join(chunks)
-        chunks.append(chunk)
-
-
-def request_bytes(url: str, *, headers: Optional[dict[str, str]] = None, timeout: float = 20) -> tuple[int, bytes]:
-    remaining = deadline_remaining()
-    if remaining is not None:
-        if remaining <= 0:
-            raise TimeoutError("overall search deadline reached")
-        timeout = min(float(timeout), remaining)
-    request_headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*"}
-    if headers:
-        request_headers.update(headers)
-    request = urllib.request.Request(url, headers=request_headers)
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.status, _read_response_body(response)
-    except urllib.error.HTTPError as error:
-        return error.code, _read_response_body(error)
-
-
-def request_json(url: str, *, headers: Optional[dict[str, str]] = None) -> Any:
-    status, body = request_bytes(url, headers=headers)
-    if status < 200 or status >= 300:
-        raise RuntimeError("HTTP {}".format(status))
-    return json.loads(body.decode("utf-8-sig"))
-
-
-def plain(value: Any) -> str:
-    if value is None:
-        return ""
-    return strip_html(html.unescape(str(value)))
-
-
-def salary_text(value: Any) -> Optional[str]:
-    if value is None:
-        return None
-    if isinstance(value, dict):
-        minimum = value.get("minValue") or value.get("min")
-        maximum = value.get("maxValue") or value.get("max")
-        currency = value.get("currency") or value.get("currencyCode") or "EUR"
-        if minimum is not None and maximum is not None:
-            value = "{}–{} {}".format(minimum, maximum, currency)
-        elif minimum is not None:
-            value = "from {} {}".format(minimum, currency)
-        else:
-            value = value.get("label") or value.get("summary") or ""
-    text = plain(value)
-    if text.casefold() in {"", "keine_angaben", "keine angaben", "not disclosed", "n/a", "none"}:
-        return None
-    return text
-
-
-def iso_date(value: Any) -> Optional[str]:
-    if not value:
-        return None
-    text = str(value).strip()
-    try:
-        if re.fullmatch(r"\d{10,13}", text):
-            stamp = int(text)
-            if len(text) == 13:
-                stamp //= 1000
-            return dt.datetime.fromtimestamp(stamp, dt.timezone.utc).date().isoformat()
-        if re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", text):
-            return dt.datetime.strptime(text, "%d.%m.%Y").date().isoformat()
-        return dt.datetime.fromisoformat(text.replace("Z", "+00:00")).date().isoformat()
-    except (ValueError, OverflowError, OSError):
-        return None
 
 
 def make_job(
@@ -127,7 +38,7 @@ def make_job(
 ) -> dict[str, Any]:
     raw_description = str(description or "")
     text = plain(raw_description)
-    analysis = analyze(raw_description) if raw_description and not deadline_near(0.05) else {}
+    analysis = analyze(raw_description) if raw_description else {}
     record = {
         "id": str(job_id or url or "{}|{}|{}".format(source, company, title)),
         "source": source,
@@ -147,18 +58,9 @@ def make_job(
     return record
 
 
-def parse_ba(
-    payload: dict[str, Any],
-    include_description: bool = False,
-    max_items: Optional[int] = None,
-) -> list[dict[str, Any]]:
+def parse_ba(payload: dict[str, Any], include_description: bool = False) -> list[dict[str, Any]]:
     jobs = []
-    items = payload.get("ergebnisliste", [])
-    if max_items is not None:
-        items = items[:max_items]
-    for item in items:
-        if deadline_near(0.02):
-            break
+    for item in payload.get("ergebnisliste", []):
         locations = item.get("stellenlokationen") or []
         addresses = []
         for location in locations:
@@ -194,18 +96,9 @@ def parse_ba(
     return jobs
 
 
-def parse_arbeitnow(
-    payload: dict[str, Any],
-    include_description: bool = False,
-    max_items: Optional[int] = None,
-) -> list[dict[str, Any]]:
+def parse_arbeitnow(payload: dict[str, Any], include_description: bool = False) -> list[dict[str, Any]]:
     jobs = []
-    items = payload.get("data", [])
-    if max_items is not None:
-        items = items[:max_items]
-    for item in items:
-        if deadline_near(0.02):
-            break
+    for item in payload.get("data", []):
         jobs.append(make_job(
             "arbeitnow", item.get("title"), item.get("company_name"), item.get("location"), item.get("url"),
             item.get("created_at"), bool(item.get("remote")) if item.get("remote") is not None else None,
@@ -281,13 +174,10 @@ def parse_personio_xml(
     body: bytes,
     company: dict[str, Any],
     include_description: bool = False,
-    max_items: Optional[int] = None,
 ) -> list[dict[str, Any]]:
     root = ET.fromstring(body)
     jobs = []
     for item in root.iter():
-        if (max_items is not None and len(jobs) >= max_items) or deadline_near(0.02):
-            break
         if item.tag.rsplit("}", 1)[-1].casefold() not in {"position", "job"}:
             continue
         fields = {child.tag.rsplit("}", 1)[-1].casefold(): " ".join("".join(child.itertext()).split()) for child in item}
@@ -336,6 +226,13 @@ def parse_personio_json(payload: dict[str, Any], company: dict[str, Any], includ
     return jobs
 
 
+def _city_country_locations(locations: list[dict[str, Any]]) -> str:
+    return " / ".join(
+        ", ".join(str(value) for value in (place.get("city"), place.get("country")) if value)
+        for place in locations
+    )
+
+
 def parse_smartrecruiters(payload: dict[str, Any], company: dict[str, Any], include_description: bool = False) -> list[dict[str, Any]]:
     jobs = []
     for item in payload.get("content", []):
@@ -360,7 +257,7 @@ def parse_recruitee(payload: dict[str, Any], company: dict[str, Any], include_de
     jobs = []
     for item in payload.get("offers", []):
         locations = item.get("locations") or []
-        location = " / ".join(", ".join(str(value) for value in (place.get("city"), place.get("country")) if value) for place in locations)
+        location = _city_country_locations(locations)
         location = location or item.get("location") or item.get("city", "")
         jobs.append(make_job(
             "ats", item.get("title"), company["name"], location, item.get("careers_url") or item.get("url"),
@@ -375,7 +272,7 @@ def parse_workable(payload: dict[str, Any], company: dict[str, Any], include_des
     jobs = []
     for item in payload.get("jobs", []):
         locations = item.get("locations") or []
-        location = " / ".join(", ".join(str(value) for value in (place.get("city"), place.get("country")) if value) for place in locations)
+        location = _city_country_locations(locations)
         jobs.append(make_job(
             "ats", item.get("title"), company["name"], location or item.get("city"), item.get("url"),
             item.get("published_on"), bool(item.get("telecommuting")) if item.get("telecommuting") is not None else None,
@@ -402,38 +299,22 @@ def parse_join(payload: dict[str, Any], company: dict[str, Any], include_descrip
     return jobs
 
 
-def _limit_payload_rows(
-    payload: dict[str, Any],
-    keys: tuple[str, ...],
-    max_items: Optional[int],
-) -> dict[str, Any]:
-    if max_items is None:
-        return payload
-    result = dict(payload)
-    for key in keys:
-        rows = result.get(key)
-        if isinstance(rows, list):
-            result[key] = rows[:max_items]
-            break
-    return result
+ATS_JSON_BOARDS = {
+    "greenhouse": ("https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true", parse_greenhouse),
+    "ashby": ("https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true", parse_ashby),
+    "smartrecruiters": ("https://api.smartrecruiters.com/v1/companies/{slug}/postings?limit=100", parse_smartrecruiters),
+    "recruitee": ("https://{slug}.recruitee.com/api/offers", parse_recruitee),
+    "workable": ("https://apply.workable.com/api/v1/widget/accounts/{slug}", parse_workable),
+    "join": ("https://join.com/api/public/companies/{slug}/jobs?locale=en-us&page=1&pageSize=25", parse_join),
+}
 
 
-def ats_jobs(
-    company: dict[str, Any],
-    include_description: bool = False,
-    max_items: Optional[int] = None,
-) -> list[dict[str, Any]]:
+def ats_jobs(company: dict[str, Any], include_description: bool = False) -> list[dict[str, Any]]:
     ats = str(company.get("ats", "")).casefold()
     slug = str(company.get("slug", ""))
-    if ats == "greenhouse":
-        payload = request_json("https://boards-api.greenhouse.io/v1/boards/{}/jobs?content=true".format(urllib.parse.quote(slug)))
-        payload = _limit_payload_rows(payload, ("jobs",), max_items)
-        return parse_greenhouse(payload, company, include_description)
     if ats == "lever":
         data = []
         for skip in range(0, 10000, 100):
-            if max_items is not None and len(data) >= max_items:
-                break
             page_url = "https://api.lever.co/v0/postings/{}?{}".format(
                 urllib.parse.quote(slug),
                 urllib.parse.urlencode({"mode": "json", "limit": 100, "skip": skip}),
@@ -441,61 +322,24 @@ def ats_jobs(
             page = request_json(page_url)
             if not isinstance(page, list):
                 raise RuntimeError("unexpected Lever response format")
-            remaining = None if max_items is None else max_items - len(data)
-            data.extend(page if remaining is None else page[:remaining])
+            data.extend(page)
             if len(page) < 100:
                 break
         return parse_lever(data, company, include_description)
-    if ats == "ashby":
-        data = request_json("https://api.ashbyhq.com/posting-api/job-board/{}?includeCompensation=true".format(urllib.parse.quote(slug)))
-        data = _limit_payload_rows(data, ("jobs",), max_items)
-        return parse_ashby(data, company, include_description)
     if ats == "personio":
         url = "https://{}.jobs.personio.de/xml?language=en".format(urllib.parse.quote(slug))
         status, body = request_bytes(url, headers={"Accept": "application/xml"})
         if 200 <= status < 300:
-            return parse_personio_xml(body, company, include_description, max_items)
+            return parse_personio_xml(body, company, include_description)
         payload = request_json("https://{}.jobs.personio.de/search.json".format(urllib.parse.quote(slug)))
         if isinstance(payload, list):
             payload = {"positionResults": payload}
-        payload = _limit_payload_rows(payload, ("positionResults", "jobs", "data"), max_items)
         return parse_personio_json(payload, company, include_description)
-    if ats == "smartrecruiters":
-        data = request_json("https://api.smartrecruiters.com/v1/companies/{}/postings?limit=100".format(urllib.parse.quote(slug)))
-        data = _limit_payload_rows(data, ("content",), max_items)
-        return parse_smartrecruiters(data, company, include_description)
-    if ats == "recruitee":
-        data = request_json("https://{}.recruitee.com/api/offers".format(urllib.parse.quote(slug)))
-        data = _limit_payload_rows(data, ("offers",), max_items)
-        return parse_recruitee(data, company, include_description)
-    if ats == "workable":
-        data = request_json("https://apply.workable.com/api/v1/widget/accounts/{}".format(urllib.parse.quote(slug)))
-        data = _limit_payload_rows(data, ("jobs",), max_items)
-        return parse_workable(data, company, include_description)
-    if ats == "join":
-        data = request_json("https://join.com/api/public/companies/{}/jobs?{}".format(
-            urllib.parse.quote(slug), urllib.parse.urlencode({"locale": "en-us", "page": 1, "pageSize": 25})))
-        data = _limit_payload_rows(data, ("items",), max_items)
-        return parse_join(data, company, include_description)
+    if ats in ATS_JSON_BOARDS:
+        endpoint, parser = ATS_JSON_BOARDS[ats]
+        data = request_json(endpoint.format(slug=urllib.parse.quote(slug)))
+        return parser(data, company, include_description)
     raise ValueError("Unsupported ATS: {}".format(ats))
-
-
-def canonical_url(url: str) -> str:
-    parsed = urllib.parse.urlsplit(url.strip())
-    query = []
-    for key, value in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True):
-        if key.casefold().startswith("utm_") or key.casefold() in {"fbclid", "gclid"}:
-            continue
-        query.append((key, value))
-    path = parsed.path.rstrip("/")
-    return urllib.parse.urlunsplit((parsed.scheme.casefold(), parsed.netloc.casefold(), path, urllib.parse.urlencode(sorted(query)), ""))
-
-
-def normalized_key(value: str) -> str:
-    folded = unicodedata.normalize("NFKD", value.casefold())
-    ascii_text = "".join(char for char in folded if not unicodedata.combining(char))
-    ascii_text = re.sub(r"\((?:m\s*/\s*w\s*/\s*d|f\s*/\s*m\s*/\s*x|all genders)\)", " ", ascii_text, flags=re.I)
-    return re.sub(r"[^a-z0-9]+", "", ascii_text)
 
 
 def dedup_key(job: dict[str, Any]) -> tuple[str, str]:
@@ -586,7 +430,7 @@ def mark_seen_jobs(
         for key in keys:
             entries.setdefault(key, first_seen)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"version": 1, "seen": entries}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json_text({"version": 1, "seen": entries}) + "\n", encoding="utf-8")
     return [job for job, _, _ in selected]
 
 
@@ -624,39 +468,6 @@ def filter_jobs(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[di
             continue
         filtered.append(job)
     return filtered
-
-
-def fetch_ba(args: argparse.Namespace) -> list[dict[str, Any]]:
-    jobs = []
-    for page in range(1, min(args.max_pages, 100) + 1):
-        params = {
-            "was": args.what,
-            "veroeffentlichtseit": str(args.days),
-            "size": "100",
-            "page": str(page),
-        }
-        if args.where:
-            params.update({"wo": args.where, "umkreis": str(args.radius)})
-        url = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs?" + urllib.parse.urlencode(params)
-        payload = request_json(url, headers={"X-API-Key": "jobboerse-jobsuche"})
-        current = parse_ba(payload, args.with_description)
-        jobs.extend(current)
-        if not current or len(jobs) >= int(payload.get("maxErgebnisse", 0) or 0):
-            break
-    return jobs
-
-
-def fetch_arbeitnow(args: argparse.Namespace) -> list[dict[str, Any]]:
-    jobs = []
-    for page in range(1, args.max_pages + 1):
-        payload = request_json("https://www.arbeitnow.com/api/job-board-api?page={}".format(page))
-        page_jobs = parse_arbeitnow(payload, args.with_description)
-        for job, item in zip(page_jobs, payload.get("data", [])):
-            job["_tags"] = " ".join(str(tag) for tag in item.get("tags", []))
-        jobs.extend(page_jobs)
-        if not payload.get("data"):
-            break
-    return jobs
 
 
 def freehire_salary(enrichment: dict[str, Any]) -> Optional[str]:
@@ -823,18 +634,14 @@ def fetch_freehire(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
     include_description = args.with_description
     endpoint = "/api/v1/agent/jobs/search" if include_description else "/api/v1/jobs/search"
     page_size = min(args.limit, 100)
-    parse_budget = max(50, args.limit * 2) if deadline_remaining() is not None else None
     city = (args.where or "").split(",", 1)[0].strip()
     jobs = []
     errors = []
     for page in range(args.max_pages):
-        if parse_budget is not None and len(jobs) >= parse_budget:
-            errors.append("posting parse cap reached to preserve the overall search budget")
-            break
         params = {
             "q": args.what,
             "countries": "de",
-            "limit": str(min(page_size, parse_budget - len(jobs))) if parse_budget is not None else str(page_size),
+            "limit": str(page_size),
             "offset": str(page * page_size),
         }
         if args.days > 0:
@@ -861,11 +668,7 @@ def fetch_freehire(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
                 ))
                 break
             rows = payload.get("data") or []
-            remaining_budget = parse_budget - len(jobs) if parse_budget is not None else None
-            page_jobs = parse_freehire(
-                _limit_payload_rows(payload, ("data",), remaining_budget),
-                include_description,
-            )
+            page_jobs = parse_freehire(payload, include_description)
             for job in page_jobs:
                 remote = job.get("remote")
                 if city:
@@ -876,13 +679,6 @@ def fetch_freehire(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
                     if city.casefold() not in location and not broad_remote:
                         continue
                 jobs.append(job)
-            if len(page_jobs) < len(rows):
-                errors.append(
-                    "page {}: parsed {} of {} postings within the overall search budget".format(
-                        page + 1, len(page_jobs), len(rows),
-                    )
-                )
-                break
         except Exception as error:
             errors.append("page {}: {}".format(page + 1, error))
             break
@@ -898,75 +694,25 @@ def fetch_ats(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list[str]
     jobs: list[dict[str, Any]] = []
     if not companies:
         return jobs, errors
-    pending: dict[concurrent.futures.Future, dict[str, Any]] = {}
-    all_futures: dict[concurrent.futures.Future, dict[str, Any]] = {}
-    processed: set[concurrent.futures.Future] = set()
-    remaining_companies = iter(companies)
     worker_count = min(4, len(companies))
-    parse_budget = max(50, args.limit * 2) if deadline_remaining() is not None else None
-
-    def record_result(future: concurrent.futures.Future, company: dict[str, Any]) -> None:
-        processed.add(future)
-        try:
-            jobs.extend(future.result())
-        except Exception as error:
-            errors.append("{}: {}".format(company.get("name", company.get("slug", "company")), error))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as pool:
-        def dispatch() -> None:
-            while len(pending) < worker_count and not deadline_near(0.05):
-                try:
-                    company = next(remaining_companies)
-                except StopIteration:
-                    return
-                context = contextvars.copy_context()
-                if parse_budget is None:
-                    future = pool.submit(context.run, ats_jobs, company, args.with_description)
-                else:
-                    future = pool.submit(context.run, ats_jobs, company, args.with_description, parse_budget)
-                pending[future] = company
-                all_futures[future] = company
-
-        dispatch()
+        pending = {
+            pool.submit(ats_jobs, company, args.with_description): company
+            for company in companies[:worker_count]
+        }
+        remaining = iter(companies[worker_count:])
         while pending:
-            remaining = deadline_remaining()
-            if remaining is not None and remaining <= 0:
-                break
-            done, _ = concurrent.futures.wait(
-                pending,
-                timeout=remaining,
-                return_when=concurrent.futures.FIRST_COMPLETED,
-            )
-            if not done:
-                break
+            done, _ = concurrent.futures.wait(pending, return_when=concurrent.futures.FIRST_COMPLETED)
             for future in done:
                 company = pending.pop(future)
-                record_result(future, company)
-            if deadline_near(0.05):
-                break
-            dispatch()
-
-    for future, company in all_futures.items():
-        if future not in processed:
-            if future.cancelled():
-                errors.append("{}: request cancelled at overall search deadline".format(
-                    company.get("name", company.get("slug", "company")),
-                ))
-            elif future.done():
-                record_result(future, company)
-            else:
-                future.cancel()
-                errors.append("{}: overall search deadline reached".format(
-                    company.get("name", company.get("slug", "company")),
-                ))
-    undispatched = list(remaining_companies)
-    if undispatched:
-        errors.extend(
-            "{}: not dispatched before overall search deadline".format(
-                company.get("name", company.get("slug", "company")),
-            )
-            for company in undispatched
-        )
+                try:
+                    jobs.extend(future.result())
+                except Exception as error:
+                    errors.append("{}: {}".format(company.get("name", company.get("slug", "company")), error))
+                next_company = next(remaining, None)
+                if next_company is not None:
+                    pending[pool.submit(ats_jobs, next_company, args.with_description)] = next_company
     return jobs, errors
 
 
@@ -1040,14 +786,7 @@ def fetch_linkedin(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
 def fetch_ba_source(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list[str]]:
     jobs: list[dict[str, Any]] = []
     errors: list[str] = []
-    parse_budget = max(50, args.limit * 2) if deadline_remaining() is not None else None
     for page in range(1, min(args.max_pages, 100) + 1):
-        if parse_budget is not None and len(jobs) >= parse_budget:
-            errors.append("posting parse cap reached to preserve the overall search budget")
-            break
-        if deadline_near(0.05):
-            errors.append("page {}: overall search deadline reached".format(page))
-            break
         params = {
             "was": args.what,
             "veroeffentlichtseit": str(args.days),
@@ -1062,17 +801,8 @@ def fetch_ba_source(args: argparse.Namespace) -> tuple[list[dict[str, Any]], lis
         except Exception as error:
             errors.append("page {}: {}".format(page, error))
             break
-        rows = payload.get("ergebnisliste", [])
-        remaining_budget = parse_budget - len(jobs) if parse_budget is not None else None
-        current = parse_ba(payload, args.with_description, remaining_budget)
+        current = parse_ba(payload, args.with_description)
         jobs.extend(current)
-        if len(current) < len(rows):
-            errors.append(
-                "page {}: parsed {} of {} postings within the overall search budget".format(
-                    page, len(current), len(rows),
-                )
-            )
-            break
         if not current or len(jobs) >= int(payload.get("maxErgebnisse", 0) or 0):
             break
     return jobs, errors
@@ -1081,32 +811,16 @@ def fetch_ba_source(args: argparse.Namespace) -> tuple[list[dict[str, Any]], lis
 def fetch_arbeitnow_source(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list[str]]:
     jobs: list[dict[str, Any]] = []
     errors: list[str] = []
-    parse_budget = max(50, args.limit * 2) if deadline_remaining() is not None else None
     for page in range(1, args.max_pages + 1):
-        if parse_budget is not None and len(jobs) >= parse_budget:
-            errors.append("posting parse cap reached to preserve the overall search budget")
-            break
-        if deadline_near(0.05):
-            errors.append("page {}: overall search deadline reached".format(page))
-            break
         try:
             payload = request_json("https://www.arbeitnow.com/api/job-board-api?page={}".format(page))
         except Exception as error:
             errors.append("page {}: {}".format(page, error))
             break
-        rows = payload.get("data", [])
-        remaining_budget = parse_budget - len(jobs) if parse_budget is not None else None
-        page_jobs = parse_arbeitnow(payload, args.with_description, remaining_budget)
+        page_jobs = parse_arbeitnow(payload, args.with_description)
         for job, item in zip(page_jobs, payload.get("data", [])):
             job["_tags"] = " ".join(str(tag) for tag in item.get("tags", []))
         jobs.extend(page_jobs)
-        if len(page_jobs) < len(rows):
-            errors.append(
-                "page {}: parsed {} of {} postings within the overall search budget".format(
-                    page, len(page_jobs), len(rows),
-                )
-            )
-            break
         if not payload.get("data"):
             break
     return jobs, errors
@@ -1157,25 +871,23 @@ def source_status_line(source: str, status: dict[str, Any]) -> str:
 
 
 def format_markdown(jobs: list[dict[str, Any]], statuses: dict[str, dict[str, Any]]) -> str:
-    lines = ["| Title | Company | Location | Posted | Remote | German | Source | URL | New |",
-             "|---|---|---|---|---|---|---|---|---|"]
+    rows = []
     for job in jobs:
-        values = [job.get("title"), job.get("company"), job.get("location"), job.get("posted") or "",
-                  "yes" if job.get("remote") is True else "no" if job.get("remote") is False else "unknown",
-                  job.get("german_required"), job.get("source"), job.get("url"),
-                  "yes" if job.get("new") else "no"]
-        lines.append("| " + " | ".join(str(value or "").replace("|", "\\|").replace("\n", " ") for value in values) + " |")
-    lines.append("")
-    lines.extend("- " + source_status_line(source, status) for source, status in statuses.items())
-    return "\n".join(lines)
+        rows.append([
+            job.get("title"), job.get("company"), job.get("location"), job.get("posted") or "",
+            "yes" if job.get("remote") is True else "no" if job.get("remote") is False else "unknown",
+            job.get("german_required"), job.get("source"), job.get("url"),
+            "yes" if job.get("new") else "no",
+        ])
+    table = markdown_table(
+        ["Title", "Company", "Location", "Posted", "Remote", "German", "Source", "URL", "New"],
+        rows,
+    )
+    statuses_text = "\n".join("- " + source_status_line(source, status) for source, status in statuses.items())
+    return table + "\n\n" + statuses_text
 
 
-def run_search(
-    params: dict[str, Any],
-    *,
-    deadline_seconds: Optional[float] = None,
-    deadline_at: Optional[float] = None,
-) -> dict[str, Any]:
+def run_search(params: dict[str, Any]) -> dict[str, Any]:
     values = {
         "what": "",
         "where": None,
@@ -1196,18 +908,7 @@ def run_search(
         "out": None,
         "with_description": False,
     }
-    source_values = dict(params)
-    if "what" not in source_values and "query" in source_values:
-        source_values["what"] = source_values["query"]
-    if "where" not in source_values and "city" in source_values:
-        source_values["where"] = source_values["city"] or None
-    if "radius" not in source_values and "radius_km" in source_values:
-        source_values["radius"] = source_values["radius_km"]
-    if "remote" not in source_values and "remote_only" in source_values:
-        source_values["remote"] = source_values["remote_only"]
-    values.update(source_values)
-    if isinstance(values["sources"], (list, tuple)):
-        values["sources"] = ",".join(str(source) for source in values["sources"])
+    values.update(params)
     args = argparse.Namespace(**values)
 
     if not str(args.what or "").strip():
@@ -1226,93 +927,75 @@ def run_search(
     if (args.dbj_role or args.dbj_level) and "dailyberlinjobs" not in requested:
         raise ValueError("--dbj-role and --dbj-level require --sources dailyberlinjobs")
 
-    deadline = deadline_at
-    if deadline is None and deadline_seconds is not None:
-        deadline = time.monotonic() + max(0.0, deadline_seconds)
-    deadline_token = _SEARCH_DEADLINE.set(deadline)
-    try:
-        args.dbj_skipped = bool(getattr(args, "dbj_skipped", False))
-        args.dbj_status_payload = getattr(args, "dbj_status_payload", None)
-        args.dbj_status_error = getattr(args, "dbj_status_error", None)
-        args.dbj_role_values = list(getattr(args, "dbj_role_values", []))
-        args.dbj_level_values = list(getattr(args, "dbj_level_values", []))
-        if "dailyberlinjobs" in requested:
-            args.dbj_skipped = not is_daily_berlin_jobs_location(args.where)
-            if not args.dbj_skipped:
-                if args.dbj_status_payload is None and not args.dbj_status_error:
-                    dbj_base_url = os.environ.get(
-                        "GJS_DBJ_URL", "https://daily-berlin-jobs.vercel.app",
-                    ).rstrip("/")
-                    try:
-                        args.dbj_status_payload = request_json(dbj_base_url + "/api/v1/status")
-                    except Exception as error:
-                        args.dbj_status_error = str(error)
-                if isinstance(args.dbj_status_payload, dict):
-                    filters = args.dbj_status_payload.get("filters") or {}
-                    args.dbj_role_values = validate_dbj_filter_values(
-                        args.dbj_role, filters.get("roles") or [], "--dbj-role",
-                    )
-                    args.dbj_level_values = validate_dbj_filter_values(
-                        args.dbj_level, filters.get("levels") or [], "--dbj-level",
-                    )
-
-        source_jobs: dict[str, list[dict[str, Any]]] = {}
-        source_errors: dict[str, list[str]] = {}
-        source_received_counts: dict[str, int] = {}
-        source_metadata: dict[str, dict[str, Any]] = {}
-        for source in requested:
-            if deadline_near(0.0) and not (
-                source == "dailyberlinjobs" and getattr(args, "dbj_skipped", False)
-            ):
-                source_jobs[source] = []
-                source_errors[source] = ["not dispatched: overall search deadline reached"]
-                source_received_counts[source] = 0
-                source_metadata[source] = {}
-                continue
+    args.dbj_skipped = False
+    args.dbj_status_payload = None
+    args.dbj_status_error = None
+    args.dbj_role_values = []
+    args.dbj_level_values = []
+    if "dailyberlinjobs" in requested:
+        args.dbj_skipped = not is_daily_berlin_jobs_location(args.where)
+        if not args.dbj_skipped:
+            dbj_base_url = os.environ.get("GJS_DBJ_URL", "https://daily-berlin-jobs.vercel.app").rstrip("/")
             try:
-                fetched = SOURCE_FETCHERS[source](args)
-                if len(fetched) == 3:
-                    results, errors, metadata = fetched
-                    source_metadata[source] = metadata
-                else:
-                    results, errors = fetched
-                    source_metadata[source] = {}
-                source_jobs[source] = results
-                source_errors[source] = list(errors)
+                args.dbj_status_payload = request_json(dbj_base_url + "/api/v1/status")
             except Exception as error:
-                source_jobs[source] = []
-                source_errors[source] = [str(error)]
-                source_metadata[source] = {}
-            source_received_counts[source] = len(source_jobs[source])
+                args.dbj_status_error = str(error)
+            if isinstance(args.dbj_status_payload, dict):
+                filters = args.dbj_status_payload.get("filters") or {}
+                args.dbj_role_values = validate_dbj_filter_values(
+                    args.dbj_role, filters.get("roles") or [], "--dbj-role",
+                )
+                args.dbj_level_values = validate_dbj_filter_values(
+                    args.dbj_level, filters.get("levels") or [], "--dbj-level",
+                )
 
-        statuses: dict[str, dict[str, Any]] = {}
-        all_jobs = []
-        for source, values in source_jobs.items():
-            filtered_source = filter_jobs(values, args)
-            statuses[source] = source_status(
-                source, len(filtered_source), source_errors[source],
-                produced_count=source_received_counts[source],
-            )
-            statuses[source].update(source_metadata.get(source, {}))
-            all_jobs.extend(filtered_source)
-        for job in all_jobs:
-            job.pop("_tags", None)
-        unique = deduplicate_jobs(all_jobs)
-        unique = sorted(unique, key=lambda job: job.get("posted") or "", reverse=True)
-        unique = mark_seen_jobs(unique, args.seen_file, args.only_new, args.limit)
-        meta = {
-            "query": {
-                "what": args.what, "where": args.where, "radius": args.radius, "days": args.days,
-                "sources": requested, "remote": args.remote, "english_only": args.english_only,
-                "limit": args.limit, "max_pages": args.max_pages, "linkedin_pages": args.linkedin_pages,
-                "dbj_role": args.dbj_role, "dbj_level": args.dbj_level, "only_new": args.only_new,
-            },
-            "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "sources": statuses,
-        }
-        return {"meta": meta, "jobs": unique}
-    finally:
-        _SEARCH_DEADLINE.reset(deadline_token)
+    source_jobs: dict[str, list[dict[str, Any]]] = {}
+    source_errors: dict[str, list[str]] = {}
+    source_received_counts: dict[str, int] = {}
+    source_metadata: dict[str, dict[str, Any]] = {}
+    for source in requested:
+        try:
+            fetched = SOURCE_FETCHERS[source](args)
+            if len(fetched) == 3:
+                results, errors, metadata = fetched
+                source_metadata[source] = metadata
+            else:
+                results, errors = fetched
+                source_metadata[source] = {}
+            source_jobs[source] = results
+            source_errors[source] = list(errors)
+        except Exception as error:
+            source_jobs[source] = []
+            source_errors[source] = [str(error)]
+            source_metadata[source] = {}
+        source_received_counts[source] = len(source_jobs[source])
+
+    statuses: dict[str, dict[str, Any]] = {}
+    all_jobs = []
+    for source, values in source_jobs.items():
+        filtered_source = filter_jobs(values, args)
+        statuses[source] = source_status(
+            source, len(filtered_source), source_errors[source],
+            produced_count=source_received_counts[source],
+        )
+        statuses[source].update(source_metadata.get(source, {}))
+        all_jobs.extend(filtered_source)
+    for job in all_jobs:
+        job.pop("_tags", None)
+    unique = deduplicate_jobs(all_jobs)
+    unique = sorted(unique, key=lambda job: job.get("posted") or "", reverse=True)
+    unique = mark_seen_jobs(unique, args.seen_file, args.only_new, args.limit)
+    meta = {
+        "query": {
+            "what": args.what, "where": args.where, "radius": args.radius, "days": args.days,
+            "sources": requested, "remote": args.remote, "english_only": args.english_only,
+            "limit": args.limit, "max_pages": args.max_pages, "linkedin_pages": args.linkedin_pages,
+            "dbj_role": args.dbj_role, "dbj_level": args.dbj_level, "only_new": args.only_new,
+        },
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "sources": statuses,
+    }
+    return {"meta": meta, "jobs": unique}
 
 
 def main() -> int:
@@ -1355,22 +1038,15 @@ def main() -> int:
     jobs = result["jobs"]
     statuses = result["meta"]["sources"]
     if args.format == "json":
-        output = json.dumps(result, ensure_ascii=False, indent=2)
+        output = json_text(result)
     elif args.format == "csv":
-        import io
-        stream = io.StringIO()
         fields = ["id", "source", "title", "company", "location", "remote", "url", "posted", "employment_type", "salary", "ad_language", "german_required", "new"]
         if args.with_description:
             fields.append("description")
-        writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(jobs)
-        output = stream.getvalue()
+        output = csv_text(jobs, fields)
     else:
         output = format_markdown(jobs, statuses)
-    print(output)
-    if args.out:
-        Path(args.out).write_text(output, encoding="utf-8")
+    write_output(output, args.out)
     for source, status in statuses.items():
         print(source_status_line(source, status), file=sys.stderr)
     return 0

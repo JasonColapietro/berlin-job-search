@@ -1,5 +1,4 @@
 ---
-# generated from commands/interview.md, do not edit.
 description: Practise a realistic mock interview (German or English) for one of your applications, with scored feedback
 argument-hint: "[tracker id or company] [stage: hr|manager|technical|final] [de|en]"
 ---

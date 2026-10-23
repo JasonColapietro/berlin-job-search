@@ -1,5 +1,4 @@
 ---
-# generated from commands/evaluate.md, do not edit.
 description: Check one job posting against your profile (German requirement, visa salary, fit score 1-5, A-F report)
 argument-hint: "<job URL, BA reference number, or pasted job text>"
 ---

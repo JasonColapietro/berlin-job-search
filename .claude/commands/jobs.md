@@ -1,5 +1,4 @@
 ---
-# generated from commands/jobs.md, do not edit.
 description: Search current jobs in Berlin or anywhere in Germany and get a scored shortlist
 argument-hint: "<role> [in <city>] [remote] [english only] [new only]"
 ---

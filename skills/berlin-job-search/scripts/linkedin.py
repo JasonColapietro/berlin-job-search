@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import argparse
-import html
-import json
 import random
 import re
 import sys
 import time
 import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Any, Optional
 
+from _common import (
+    clean_html_fragment,
+    json_text,
+    markdown_table,
+    request_bytes,
+    unescape_html,
+    write_output,
+)
 from analyze_jd import analyze
 
 SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
@@ -61,48 +66,40 @@ def _pace() -> None:
 def fetch_html(url: str, allow_not_found: bool = False) -> str:
     for attempt in range(3):
         _pace()
-        request = urllib.request.Request(
-            url,
-            headers={
+        try:
+            status, body = request_bytes(url, headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
                 "X-Requested-With": "XMLHttpRequest",
-            },
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=20) as response:
-                return response.read().decode("utf-8", "replace")
-        except urllib.error.HTTPError as error:
-            if error.code == 999:
+            })
+            if 200 <= status < 300:
+                return body.decode("utf-8", "replace")
+            if status == 999:
                 raise LinkedInBlockedError(
                     "LinkedIn blocks datacenter/VPN IPs; run from a home connection or use the browser recipe"
-                ) from error
-            if error.code == 404 and allow_not_found:
+                )
+            if status == 404 and allow_not_found:
                 return ""
-            if error.code == 429 or error.code >= 500:
+            if status == 429 or status >= 500:
                 if attempt < 2:
                     time.sleep((2 ** attempt) + random.uniform(0.0, 0.5))
                     continue
                 raise LinkedInRequestError(
-                    "LinkedIn request failed after two retries: HTTP {}".format(error.code)
-                ) from error
-            raise LinkedInRequestError("LinkedIn request failed: HTTP {}".format(error.code)) from error
+                    "LinkedIn request failed after two retries: HTTP {}".format(status)
+                )
+            raise LinkedInRequestError("LinkedIn request failed: HTTP {}".format(status))
         except urllib.error.URLError as error:
             raise LinkedInRequestError("Could not reach LinkedIn guest endpoint: {}".format(error.reason)) from error
     raise LinkedInRequestError("LinkedIn request failed after two retries")
 
 
 def _decode_entities(text: str) -> str:
-    return html.unescape(text)
+    return unescape_html(text)
 
 
 def _clean(markup: str) -> str:
-    return _decode_entities(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", markup)).strip())
-
-
-def _decode_entities(text: str) -> str:
-    return html.unescape(text)
+    return clean_html_fragment(markup)
 
 
 def parse_job_cards(markup: str) -> list[dict[str, Any]]:
@@ -405,12 +402,12 @@ def fetch_job_detail(job_id_or_url: str) -> dict[str, Any]:
 
 
 def _search_markdown(results: list[dict[str, Any]]) -> str:
-    lines = ["| ID | Title | Company | Location | Date | URL |", "|---|---|---|---|---|---|"]
-    for job in results:
-        values = [job["id"], job["title"], job.get("company") or "", job.get("location") or "",
-                  job.get("date") or "", job["url"]]
-        lines.append("| " + " | ".join(str(value).replace("|", "\\|") for value in values) + " |")
-    return "\n".join(lines)
+    rows = [
+        [job["id"], job["title"], job.get("company") or "", job.get("location") or "",
+         job.get("date") or "", job["url"]]
+        for job in results
+    ]
+    return markdown_table(["ID", "Title", "Company", "Location", "Date", "URL"], rows, normalize_newlines=False)
 
 
 def _detail_markdown(job: dict[str, Any]) -> str:
@@ -422,7 +419,7 @@ def _detail_markdown(job: dict[str, Any]) -> str:
         lines.append("- **{}:** {}".format(label, job.get(key) or "—"))
     lines.extend(["", "## Description", job.get("description") or "No readable description found.",
                   "", "## Analysis", "```json",
-                  json.dumps(job.get("analysis", {}), ensure_ascii=False, indent=2), "```"])
+                  json_text(job.get("analysis", {})), "```"])
     return "\n".join(lines)
 
 
@@ -473,14 +470,14 @@ def main() -> int:
                 args.pages, args.limit,
             )
             payload = {"meta": {"count": len(results), "pages": args.pages}, "results": results}
-            output = json.dumps(payload, ensure_ascii=False, indent=2) if args.format == "json" else _search_markdown(results)
+            output = json_text(payload) if args.format == "json" else _search_markdown(results)
         else:
             job = fetch_job_detail(args.job_id_or_url)
-            output = json.dumps(job, ensure_ascii=False, indent=2) if args.format == "json" else _detail_markdown(job)
-        print(output)
+            output = json_text(job) if args.format == "json" else _detail_markdown(job)
+        write_output(output)
         return 0
     except (LinkedInRequestError, ValueError, urllib.error.URLError) as error:
-        print(json.dumps({"error": str(error), "code": "LINKEDIN_FAILED"}), file=sys.stderr)
+        print(json_text({"error": str(error), "code": "LINKEDIN_FAILED"}, indent=None), file=sys.stderr)
         return 1
 
 

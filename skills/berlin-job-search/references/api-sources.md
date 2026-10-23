@@ -1,6 +1,8 @@
 # Public API sources and script behavior
 
-The scripts use Python's standard library, public endpoints, a 20-second network timeout, and the user agent `berlin-job-search-skill/0.1 (+https://github.com/umutyesildal/berlin-job-search)` except LinkedIn, which uses a browser-like user agent. They do not log in, submit applications, or require secrets. Default sources are `dailyberlinjobs,ba,arbeitnow,ats,linkedin`; Freehire is opt-in. The source-name → fetch-function registry keeps new sources isolated. Each `meta.sources` entry has `ok`, `count`, `error`, and `partial_errors`. A source is `ok: false` only when its fetcher produced zero records and had errors; `count` is after query filters, so it can be zero even when the source fetched non-matching records. Partial company/page errors are listed while successful records remain usable. Other sources continue. ATS boards are fetched concurrently with no more than four workers for hosted searches.
+> Source APIs and job postings change; verify material details on the employer's current page.
+
+The scripts use Python's standard library, public endpoints, a 20-second request timeout and the user agent `berlin-job-search-skill/0.1 (+https://github.com/umutyesildal/berlin-job-search)`; LinkedIn uses a browser-like user agent. No login/secrets are required. Default sources: `dailyberlinjobs,ba,arbeitnow,ats,linkedin`; Freehire is opt-in. Each `meta.sources` entry has `ok`, `count`, `error` and `partial_errors`; a source fails only if it returns no records and has errors. Counts are post-filter, pre-dedup/global limit; partial errors preserve successful results. ATS uses at most four workers.
 
 ## Bundesagentur für Arbeit (BA) Jobsuche
 
@@ -11,9 +13,9 @@ X-API-Key: jobboerse-jobsuche
 
 The public key above is part of the documented public client interface, not a user secret. The script sends `was` (keywords), `wo` (location), `umkreis` (km), `veroeffentlichtseit` (days), `size` (100, never above 100), and `page` (1-based). It reads `ergebnisliste[]` and `maxErgebnisse`. Relevant fields include `stellenangebotsTitel`, `firma`, `stellenlokationen[].adresse.{ort,plz}`, `referenznummer`, `datumErsteVeroeffentlichung`, `externeURL`, `homeofficemoeglich`, and `verguetungsangabe`.
 
-The v6 endpoint is used; v4 returned HTTP 403 during live checks. Known limits include a hard 100-page maximum, sporadic 403 rate limiting, and no server-side sort. The [bundesAPI jobsuche-api README](https://github.com/bundesAPI/jobsuche-api) documents v6 fields and query parameters. `arbeitszeit` / `angebotsart` pass-throughs are not exposed because parameter values and behavior have not been independently checked here.
+**Dated check (2026-10-23):** v6 is used; v4 returned HTTP 403. Limits: 100 pages maximum, sporadic 403 rate limiting, no server-side sort. The [bundesAPI v6 README](https://github.com/bundesAPI/jobsuche-api) documents fields/parameters. `arbeitszeit` and `angebotsart` are not exposed because their values/behavior are unverified.
 
-**Detail URL:** `https://www.arbeitsagentur.de/jobsuche/jobdetail/{referenznummer}` was fetched successfully on 2026-10-23 for `12336-a26f539j0456360-S`; the page included a `JobPosting` JSON-LD record. If a different page is unavailable, use its `externeURL` as a secondary lead or open the BA result manually. No working authenticated or undocumented detail API is assumed.
+**Detail URL:** `https://www.arbeitsagentur.de/jobsuche/jobdetail/{referenznummer}`. On 2026-10-23, `12336-a26f539j0456360-S` returned a `JobPosting` JSON-LD record. If another page is unavailable, use `externeURL` as a lead or open the BA result manually; no authenticated/undocumented detail API is assumed.
 
 ## Arbeitnow
 
@@ -25,7 +27,7 @@ This is keyless. The response uses `data[]`; observed fields include `slug`, `co
 
 ## ATS boards
 
-The starter catalog was built from active entries in the public `job-client` company catalog, then each included board was checked against its live endpoint for at least one listing on 2026-10-23. It includes only currently supported JSON/XML board types.
+The starter catalog comes from active entries in the public `job-client` catalog; each included board returned at least one listing on 2026-10-23. It includes supported JSON/XML board types.
 
 | ATS | Public endpoint pattern | Important fields / notes |
 |---|---|---|
@@ -40,7 +42,7 @@ The starter catalog was built from active entries in the public `job-client` com
 
 ATS locations and descriptions vary by provider. `--where` matches location strings; remote-only/Germany-wide listings are kept only with `--remote`. `--what` requires all query words in the title for ATS results. Description-based language and German requirements are analyzed by `analyze_jd.py`.
 
-The initial catalog live checks returned at least one posting for each included company. Examples: Greenhouse Raisin (38), N26 (37), Contentful (24), and Celonis (218); Lever Pipedrive (8), Qonto (37), and Octopus Energy (172); Ashby GALVANY (28); Personio Juna AI (3); SmartRecruiters Flink (96) and BVG (26); Recruitee Zeotap (1); Workable dltHub (2). These are volatile counts, not an availability guarantee.
+Example company counts on 2026-10-23: Greenhouse Raisin 38, N26 37, Contentful 24, Celonis 218; Lever Pipedrive 8, Qonto 37, Octopus Energy 172; Ashby GALVANY 28; Personio Juna AI 3; SmartRecruiters Flink 96, BVG 26; Recruitee Zeotap 1; Workable dltHub 2. Counts are volatile, not availability guarantees.
 
 ### Identify an ATS and add an employer
 
@@ -54,9 +56,9 @@ The script does not implement unsupported ATS systems or silently use a credenti
 
 ## LinkedIn
 
-There is no official public LinkedIn job-search API for individual job seekers. LinkedIn's official [Job Posting API](https://learn.microsoft.com/en-us/linkedin/talent/job-postings/api/overview?view=li-lts-2026-03) is a partner product that posts, updates, renews, and closes job ads; requests use OAuth client credentials and are not a read/search API for candidates. The script does **not** use internal Voyager endpoints, logged-in cookies, browser storage, or account credentials. Those endpoints are private, tied to authenticated sessions, can rotate or change without notice, and can lead to account restrictions; do not use or automate them. LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) and [prohibited software guidance](https://www.linkedin.com/help/linkedin/answer/a1341387) prohibit unauthorized automated access and scraping.
+There is no official public LinkedIn job-search API for individual job seekers. The [Job Posting API](https://learn.microsoft.com/en-us/linkedin/talent/job-postings/api/overview?view=li-lts-2026-03) is a partner product for posting/updating ads, not candidate search. This skill never uses internal Voyager endpoints, logged-in cookies or browser storage; private authenticated endpoints can change and risk account restrictions. LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) and [prohibited software guidance](https://www.linkedin.com/help/linkedin/answer/a1341387) prohibit unauthorized automation/scraping.
 
-The default search makes one low-volume request to the public guest page; a caller can omit `linkedin` with `--sources`. This is not an endorsed API and its use may still violate LinkedIn's terms; the user decides whether to run it. Prefer the human-operated UI recipes in [browser search](browser-search.md) for alerts, saved jobs, Easy Apply, or any logged-in task.
+The optional guest source makes one low-volume request by default; omit it with `--sources`. It is unofficial and may still violate LinkedIn's terms; the user chooses whether to run it. Use [browser search](browser-search.md) for alerts, saved jobs, Easy Apply and logged-in tasks.
 
 ```text
 GET https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search
@@ -91,9 +93,7 @@ Each identifier was used in a guest search and the returned card locations were 
 | Frankfurt / Rhine-Main | `90009714` |
 | Cologne / Bonn | `90009713` |
 
-The separate CLI is `python3 scripts/linkedin.py search --location "Berlin, Germany" --query "data engineer" --days 7 --pages 1`; use `linkedin.py detail <job-id>` to retrieve a public posting's full text. The CLI uses a browser-like UA, randomized 2–4 second spacing between requests, a hard five-page cap, and at most two retries with backoff for 429/5xx. It stops immediately on HTTP 999 with: “LinkedIn blocks datacenter/VPN IPs; run from a home connection or use the browser recipe.” The `search.py` LinkedIn source uses one page by default and fetches details for at most its first ten results only when `--with-description` is set.
-
-This endpoint returned HTTP 200 during the live checks, but LinkedIn can block datacenter/VPN IPs and change the markup. Never use internal/Voyager APIs, logged-in cookies, or attempts to bypass a block. A one-line Terms-of-Service warning is printed to stderr.
+The separate CLI is `python3 scripts/linkedin.py search --location "Berlin, Germany" --query "data engineer" --days 7 --pages 1`; `linkedin.py detail <job-id>` retrieves public text. It uses a browser-like UA, random 2–4-second request spacing, a five-page cap and at most two 429/5xx retries. HTTP 999 stops with a datacenter/VPN-block notice. The `search.py` source defaults to one page and hydrates at most ten details with `--with-description`; it prints one ToS warning to stderr. Guest access returned HTTP 200 in the 2026-10-23 check, but may be blocked or change markup.
 
 Example low-volume session:
 
@@ -116,7 +116,7 @@ Both endpoints are public and unauthenticated. The agent endpoint returns full d
 
 Responses use `{data, meta}`. A job's `public_slug`, `title`, `company`, `location`, `url`, `posted_at`, `work_mode`, `description`, and `enrichment` fields map to the unified record. Salary enrichment preserves `salary_currency` and `salary_period`; missing geography is unknown, not a reason to guess. The [API documentation](https://freehire.me/docs/api) currently lists 600 requests/minute for ordinary reads and 300/minute for the agent endpoint; responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`. Keep this opt-in source low-volume. The source returns an error rather than pretending an unsupported filter succeeded when `meta.ignored_params` reports one.
 
-A live 2026-10-23 comparison on the agent endpoint returned 76,724 German postings without `q` and 10,587 for `q=software engineer`; the count is dynamic, but this confirmed the query parameter was recognized. The geography facets are an OR-group, so `countries=de&cities=Berlin` can include other German cities; the script locally filters the returned location text to the requested city.
+Dated 2026-10-23 query-parser snapshot: the agent endpoint returned 76,724 German postings without `q` and 10,587 for `q=software engineer`; counts vary, and the request recognized `q`. Geography facets are ORed; the script locally filters location text to the requested city.
 
 ## Daily Berlin Jobs
 
@@ -149,25 +149,17 @@ GET /api/v1/jobs/{id}
 | `work_mode` | `Remote` when `--remote` is set. |
 | `limit`, `cursor` | Fixed list-page limit 500; follow `next_cursor` up to `--max-pages`. |
 
-The API does not tokenize a multiword `q` into all-words matching. A live comparison returned 337 for `q=software engineer`, 396 for `q=software`, and 1,243 for `q=engineer`; the implementation uses the longest query token as a candidate filter (`software` for the tie) and locally requires all query words in the title, matching the other title-search sources without using the restrictive phrase query. This finding is specific to the current corpus and query parser.
+The API does not tokenize multiword `q`. On 2026-10-23, `software engineer` returned 337, `software` 396, and `engineer` 1,243. The client uses the longest query token (`software` on this tie) for candidates, then requires all query words in the title; counts vary with the corpus/parser.
 
 `search.py` stores the DBJ row's original posting URL in `url`, the board detail endpoint in `detail_url`, and its provider as `via`; unified `source` is `dailyberlinjobs`. Remote maps to `true`, on-site to `false`, and hybrid to `null`. `posted` comes from `posted_date`. With `--with-description`, the search source requests details for at most ten `via=ats` rows and analyzes any available raw description; the remaining DBJ descriptions are `null` and their language requirements remain unknown. The whole run makes one status call, at most `--max-pages` list calls, and at most ten detail calls.
 
 Direct reading options include [all jobs as Markdown](https://daily-berlin-jobs.vercel.app/jobs.md), [today's update as Markdown](https://daily-berlin-jobs.vercel.app/today.md), per-job Markdown at `/jobs/{id}.md`, [the daily `/agents.md` routine](https://daily-berlin-jobs.vercel.app/agents.md), [`/llms.txt`](https://daily-berlin-jobs.vercel.app/llms.txt), and [RSS](https://daily-berlin-jobs.vercel.app/feed.xml). For a programmatic client, prefer the paginated API rather than downloading the full Markdown feed repeatedly.
 
-### MCP (Streamable HTTP)
+### Daily Berlin Jobs MCP (Streamable HTTP)
 
-The unauthenticated, read-only MCP endpoint is `https://daily-berlin-jobs.vercel.app/api/mcp`. A live `initialize` using protocol `2025-03-26` and `tools/list` both returned HTTP 200 JSON; the server returned no `Mcp-Session-Id` during the check. The client sent the standard `notifications/initialized` notification (HTTP 202) between them. Use `Accept: application/json, text/event-stream`, `Content-Type: application/json`, and include an `Mcp-Session-Id` on subsequent calls if the server returns one.
+The external board also offers unauthenticated, read-only MCP at `https://daily-berlin-jobs.vercel.app/api/mcp`. Use `Accept: application/json, text/event-stream` and `Content-Type: application/json`; include `Mcp-Session-Id` on later calls if returned. On 2026-10-23, protocol `2025-03-26` initialize/tools-list returned HTTP 200, `notifications/initialized` HTTP 202, and no session ID was returned.
 
-The live `tools/list` schemas were:
-
-| Tool | Input schema |
-|---|---|
-| `get_status` | `{"type":"object","properties":{}}` |
-| `search_jobs` | Optional `query` string; `roles`, `levels`, and `work_modes` arrays of strings; `source` enum `ats` / `linkedin`; `since` string; `latest` boolean; `limit` integer (default 20, min 1, max 100); `cursor` string. |
-| `get_job` | Required `id` integer (schema bounds −9007199254740991 through 9007199254740991). |
-
-The observed JSON Schemas (`tools/list`) were:
+Tools and inputs:
 
 ```json
 {
@@ -229,7 +221,7 @@ See the [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for
 
 ## Hiring.cafe (browser-only; no HTTP scraper)
 
-Live discovery on 2026-10-23: `hiring.cafe` redirected to `hiringcafe.com`; curl received HTTP 403 with a Cloudflare JavaScript challenge. A temporary, headless Playwright browser also reached the challenge and exposed no search form or job API request. The legacy plain-HTTP calls were nonfunctional (`GET /api/search-jobs` → 401, `POST /api/search-jobs` → 405, `/api/search-jobs/get-total-count` → 404). No HTTP script is included and no old Elasticsearch request body is used. See the [browser recipe](browser-search.md). Current API details and UI filter names are `(verify)`.
+**Availability note (2026-10-23):** `hiring.cafe` redirected to `hiringcafe.com`; curl and Playwright received HTTP 403 with a Cloudflare JavaScript challenge, exposing no search form or job API request. Legacy endpoints returned `GET /api/search-jobs` 401, `POST /api/search-jobs` 405 and `/api/search-jobs/get-total-count` 404. No HTTP scraper or old Elasticsearch request body is used. See [browser search](browser-search.md); current API/UI filters are `(verify)`.
 
 ## Normalization, filtering, and failure behavior
 
@@ -257,6 +249,6 @@ HTTP behavior is intentionally conservative:
 
 ## Output and privacy
 
-JSON includes query metadata, a UTC generation timestamp, per-source `ok`, `count`, and `error`, plus normalized records. A source's count is after its client-side query filters and before cross-source deduplication and the global output limit. Description text is omitted unless `--with-description` is set and then capped at 4,000 plain-text characters. Do not publish a job search file that contains personal annotations. `tracker.py` writes only to the local path in `$GJS_DATA_DIR` or `./job-search/`.
+JSON contains query metadata, a UTC timestamp, source statuses and normalized records. Descriptions are omitted unless `--with-description` and capped at 4,000 characters; see the normalization table. Keep search notes local: `tracker.py` writes to `$GJS_DATA_DIR` or `./job-search/`.
 
 With `--seen-file PATH`, `search.py` stores first-seen dates for canonical URLs and normalized company/title/city identities in a local JSON map and adds `new: true|false` to results. `--only-new` requires that file. Without it, the tool has no cross-run memory and marks every result `new: true`; keep the file private and local.

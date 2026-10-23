@@ -4,7 +4,6 @@ import argparse
 import collections
 import datetime as dt
 import html
-import json
 import re
 import shutil
 import subprocess
@@ -12,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-from analyze_jd import strip_html
+from _common import json_text, markdown_table, strip_html, write_output
 
 
 STOPWORDS = set(
@@ -394,19 +393,17 @@ def analyze_document(
 
 
 def format_markdown(summary: dict[str, Any]) -> str:
-    lines = [
+    rows = [
+        [item["check"], item["status"], json_text(item["detail"], indent=None, sort_keys=True)]
+        for item in summary["checks"]
+    ]
+    return "\n".join([
         "# ATS check",
         "",
         "**Score:** {}%".format(summary["score"]),
         "",
-        "| Check | Status | Detail |",
-        "|---|---|---|",
-    ]
-    for item in summary["checks"]:
-        detail = json.dumps(item["detail"], ensure_ascii=False, sort_keys=True)
-        detail = detail.replace("|", "\\|").replace("\n", " ")
-        lines.append("| {} | {} | {} |".format(item["check"], item["status"], detail))
-    return "\n".join(lines)
+        markdown_table(["Check", "Status", "Detail"], rows),
+    ])
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -425,8 +422,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             if not keywords:
                 keywords = derive_keywords(jd_text)
         summary = analyze_document(text, args.type, pages, keywords)
-        output = json.dumps(summary, ensure_ascii=False, indent=2) if args.format == "json" else format_markdown(summary)
-        print(output)
+        output = json_text(summary) if args.format == "json" else format_markdown(summary)
+        write_output(output)
         return 0
     except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
         print("error: {}".format(error), file=sys.stderr)

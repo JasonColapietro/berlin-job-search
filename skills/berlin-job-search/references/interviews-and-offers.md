@@ -1,137 +1,56 @@
 # Interviews and offers
 
-> Portions adapted from career-ops (MIT) — see NOTICE.md.
+> Practical preparation, not legal advice. Portions adapt career-ops concepts; see NOTICE.md. The user reviews and decides on all terms and actions.
 
-## Typical process and preparation
+## Interview preparation
 
-A German professional hiring process may include an HR screen, hiring-manager interview, technical or work-sample round, team discussion, references, and written offer. Order and number of stages vary by employer and role. Ask about the process, decision timeline, who will attend, and whether a task is paid.
+A process may include HR, hiring manager, technical/work sample, team discussion, references and a written offer; stages vary. Ask who will attend, the decision timeline, task scope and whether a work sample is paid. Prepare a 30–60 second role-specific introduction, two or three STAR+R stories, and questions about priorities, success measures, team, language and first 90 days. Test audio/video and timezone. For German interviews, practice role vocabulary and salary/start-date answers without overstating CEFR level.
 
-Be ready to answer:
-
-- **Stärken / Schwächen:** give a relevant strength with evidence; describe a genuine development area and how you manage it.
-- **Gehaltsvorstellung:** annual gross range and what it depends on.
-- **Kündigungsfrist / Eintrittstermin:** notice period and earliest realistic start date.
-- **Warum wir?** connect the role's actual work and employer's product / mission to your experience; avoid generic praise.
-- **Work authorization and location:** answer accurately and share only relevant detail.
-
-## Preparation checklist
-
-- Re-read the posting and highlight the three outcomes the role is expected to deliver.
-- Prepare a 30–60 second introduction that connects current experience to the role; do not recite a biography.
-- Choose two or three STAR+R stories that demonstrate relevant scope, collaboration, and learning.
-- Test video/audio, confirm the time zone, and check how the employer wants the interview to be conducted.
-- Prepare questions about the manager, success measures, team structure, decision process, and first 90 days.
-- For a German-language interview, practice role-specific vocabulary and a concise salary/start-date answer; do not claim a CEFR level you cannot demonstrate.
-
-Useful questions to ask include: “What would success look like after six months?”, “How is the team’s work prioritized?”, “Which language is used for meetings and documentation?”, and “How many office days are expected in practice?” Adapt questions to the role rather than asking a fixed script.
-
-### Probearbeit and work samples
-
-An interview exercise or short, clearly bounded trial can be part of selection. A trial that performs productive work for the employer may trigger employment and wage obligations; the legal line depends on facts. Ask in writing about scope, duration, payment, data/IP ownership, and whether the task will be used commercially. Do not provide substantial unpaid production work without advice. **(verify)** See the statutory [minimum-wage rules for internships, §22 MiLoG](https://www.gesetze-im-internet.de/milog/__22.html) and consult a labor-law adviser if uncertain.
-
-## STAR+R story bank
-
-Prepare flexible stories that show how you work; do not memorize a script.
-
-| Part | Prompt |
+| STAR+R | Prepare |
 |---|---|
-| **Situation** | What was the context and why did it matter? |
-| **Task** | What responsibility or goal was yours? |
-| **Action** | What did you personally do, and why? |
-| **Result** | What changed? Use a measurable result only if you can substantiate it. |
-| **Reflection** | What did you learn, and what would you do differently next time? |
+| Situation | Context and why it mattered. |
+| Task | Your responsibility or goal. |
+| Action | What you personally did and why. |
+| Result | What changed; quantify only with evidence. |
+| Reflection | What you learned or would change. |
 
-Build stories about collaboration, ambiguity, a difficult decision, a setback, learning, and delivering an outcome. Adapt each to the role, and distinguish your work from the team's.
+Build adaptable examples about collaboration, ambiguity, a difficult decision, a setback, learning and delivery. Distinguish your work from the team's; anonymize confidential details without changing the result. Prompts: hardest project; disagreement and resolution; unexpected result; prioritization under constraints; feedback that changed your approach; result most relevant to the role.
 
-### Story prompts
+A bounded interview exercise can be part of selection. A trial that produces usable work may trigger employment/wage obligations; ask in writing about scope, duration, payment, data/IP ownership and commercial use. **(verify)** See [§22 MiLoG](https://www.gesetze-im-internet.de/milog/__22.html); seek labor-law advice when unsure.
 
-- What was the hardest part of the project, and what did you personally change?
-- When did you disagree with a manager or teammate, and how did you resolve it?
-- What did you learn from a decision that did not produce the result you expected?
-- How did you prioritize work when time or resources were constrained?
-- What feedback changed how you work?
-- Which result best demonstrates the responsibilities in this posting?
+## Contract review
 
-If a story involves customer, employer, or security-sensitive material, anonymize it without changing the factual result.
+Ask for the full draft and enough time to review. German terms below are not self-interpreting; get qualified advice on unusual, broad or high-value clauses.
 
-## Contract checklist
-
-This is a review checklist, not legal advice. Ask for a complete draft and enough time to review it.
-
-| Term | Questions to check |
+| Term | Check |
 |---|---|
-| Employer and role | Correct legal entity, title, reporting line, workplace, and duties? |
-| Contract duration | Unbefristet or befristet? If fixed-term, what end date and objective reason / statutory basis? **(verify)** See [TzBfG](https://www.gesetze-im-internet.de/tzbfg/). |
-| Probezeit | Is the duration explicit? A probationary period is commonly up to six months; during an agreed probation period of up to six months, the statutory notice period is two weeks. [§622(3) BGB](https://www.gesetze-im-internet.de/bgb/__622.html). |
-| Notice | Check notice period during and after probation, any unequal terms, and applicable collective agreement. General statutory baseline: four weeks to the 15th or month end, with employer-side extensions in §622 BGB. |
-| Pay | Base gross annual salary, payment date, bonus conditions, commissions, signing bonus, equity, and any clawback. |
-| Hours / overtime | Weekly hours, overtime definition, compensation or time off, and whether clauses are specific and lawful. Get legal review for broad “all overtime included” wording. |
-| Vacation | Annual paid leave and public-holiday location. Statutory minimum is four weeks; the usual five-day schedule equates to 20 days. [§3 BUrlG](https://www.gesetze-im-internet.de/burlg/__3.html). |
-| Work location | Office, hybrid, home office, relocation, travel, and reimbursement terms. |
-| Benefits | bAV, VWL, Deutschlandticket/Jobticket, Jobrad, training budget, health benefits, and eligibility / employer contribution. |
-| Confidentiality / IP | Scope, portfolio rights, side projects, open-source work, inventions, and post-employment restrictions. |
-| Non-compete | A post-contract restriction generally needs a written agreement and compensation of at least 50% of contractual benefits during the restriction; further limits apply. [§74 HGB](https://www.gesetze-im-internet.de/hgb/__74.html), [§74a HGB](https://www.gesetze-im-internet.de/hgb/__74a.html), [§110 GewO](https://www.gesetze-im-internet.de/gewo/__110.html). |
-| Betriebsrat / Tarif | Is there a works council? Is a collective agreement (Tarifvertrag) or above-tariff (AT) arrangement relevant? |
-| Immigration | Is the job title, salary, hours, and employer consistent with the permit route? Ask the authority before a change if uncertain. |
+| Employer, role, reporting | Legal entity, title, manager, duties and workplace match the discussed offer. |
+| `Vertragsdauer` / fixed term | `Unbefristet` or `befristet`, end date and statutory basis; **(verify)** [TzBfG](https://www.gesetze-im-internet.de/tzbfg/). |
+| `Probezeit` | Duration explicit; commonly up to six months. An agreed probation of up to six months has a statutory two-week notice period: [§622(3) BGB](https://www.gesetze-im-internet.de/bgb/__622.html). |
+| `Kündigungsfrist` | Notice during/after probation, unequal terms and collective agreement. General baseline is four weeks to the 15th or month end; employer-side extensions are in §622 BGB. |
+| `Vergütung` / `Grundgehalt` / `Sonderzahlung` | Guaranteed annual gross, payment date, bonus/commission, signing pay, conditions and clawback. |
+| `Tarifgruppe` / `Entgeltgruppe` | Duties/experience that set group and step; determine whether the role is tariff-covered or above tariff (`AT`). |
+| `Arbeitszeit` / `Überstunden` | Weekly hours, schedule/time recording, overtime definition and pay/time off; challenge vague “all overtime included” terms. |
+| `Urlaubstage` | Annual paid leave and public-holiday location. Statutory minimum: four weeks; normally 20 days on a five-day schedule. [§3 BUrlG](https://www.gesetze-im-internet.de/burlg/__3.html). |
+| `Arbeitsort` / `Mobiles Arbeiten` | Assigned site, hybrid/home-office terms, relocation, travel and reimbursement; remote work may be policy, not a contract right. |
+| Benefits | bAV, VWL, Deutschlandticket/Jobticket, Jobrad, training and health benefits; check eligibility, contribution and vesting. |
+| Confidentiality / IP | Scope, portfolio rights, side projects, open source, inventions and post-employment limits. |
+| `Wettbewerbsverbot` | A post-contract restriction generally requires writing and at least 50% of contractual benefits during the restriction; limits apply. [§74 HGB](https://www.gesetze-im-internet.de/hgb/__74.html), [§74a HGB](https://www.gesetze-im-internet.de/hgb/__74a.html), [§110 GewO](https://www.gesetze-im-internet.de/gewo/__110.html). |
+| `Betriebsrat`, `Widerrufsvorbehalt`, `Ausschlussfrist`, `Nebentätigkeit` | Check works-council/collective terms, changeable benefits, deadlines for asserting claims, and approval rules for outside work. |
+| Immigration | Job title, salary, hours and legal employer must fit the permit route; ask the authority before a change if uncertain. |
 
-## Common German contract terms
+Red flags include mismatched employer/pay/role; unclear fixed term or probation; broad deductions/clawbacks; usable unpaid trial work; an undisclosed office/relocation requirement; an uncompensated non-compete; or a recruiter asking for payment, bank details or passport scans before a verified offer.
 
-| German term | Plain-language meaning | Ask the employer |
-|---|---|---|
-| Vertragsbeginn / Eintrittstermin | Contract start / intended start date | What is the agreed first working day? |
-| Vertragsdauer | Contract duration | Is the role unbefristet or befristet, and when does it end? |
-| Probezeit | Probationary period | How long, and what notice period applies? |
-| Kündigungsfrist | Notice period | Does it differ for employee and employer, or after a tenure milestone? |
-| Arbeitszeit | Working time | Weekly hours, scheduling, and time-recording system? |
-| Überstunden | Overtime | Paid, time-off in lieu, or included within a clearly defined cap? |
-| Urlaubstage | Annual leave days | Is the count based on a five-day week? |
-| Arbeitsort | Work location | Which office or site is contractually assigned? |
-| Mobiles Arbeiten | Mobile work | Is remote work a policy or contractual entitlement? |
-| Vergütung / Grundgehalt | Compensation / base salary | What gross amount is guaranteed, and when is it paid? |
-| Sonderzahlung | Additional payment | Guaranteed or discretionary? Is repayment possible? |
-| Tarifgruppe / Entgeltgruppe | Collective pay group | Which duties and experience determine the group and step? |
-| Widerrufsvorbehalt | Revocation reservation | Which benefits can be changed or withdrawn, and under what conditions? |
-| Ausschlussfrist | Contractual claim deadline | How quickly must wage or other claims be asserted in writing? |
-| Nebentätigkeit | Secondary activity | Is notification or prior approval required? |
+## Compare and respond to offers
 
-The German-language label alone does not determine legal effect. Read the clause, ask for an explanation, and get qualified advice about unusual, broad, or high-value terms.
-
-### Common contract red flags
-
-- A role, salary, or employer entity differs from the offer discussed.
-- A fixed term or probation period is not clearly stated.
-- Broad wage deductions, repayment obligations, or bonus clawbacks lack understandable conditions.
-- Unpaid trial work is expected to produce usable commercial work.
-- “Remote” recruitment becomes an undisclosed mandatory relocation or office requirement.
-- A non-compete appears broad but has no clear compensation terms.
-- A recruiter asks for payment, bank details, or a passport scan before a verified offer.
-
-## Offer comparison worksheet
-
-| Factor | Offer A | Offer B | Notes / questions |
+| Factor | Offer A | Offer B | Notes |
 |---|---|---|---|
-| Annual base gross | | | |
-| Guaranteed variable pay | | | |
-| Target bonus / commission | | | |
-| Equity / VSOP | | | |
-| Paid leave | | | |
-| Hours and overtime | | | |
-| Location / remote terms | | | |
-| Contract length / probation | | | |
-| Notice and start date | | | |
-| Permit compatibility | | | |
-| Team, manager, growth, stability | | | |
-| Open questions / deadline | | | |
+| Annual base gross / guaranteed variable pay | | | |
+| Target bonus, commission, equity/VSOP | | | |
+| Leave, hours and overtime | | | |
+| Location, remote terms, commute | | | |
+| Contract length, probation, notice, start date | | | |
+| Permit compatibility, team, manager, growth, stability | | | |
+| Open questions and decision deadline | | | |
 
-Compare guaranteed value separately from contingent bonus or equity. Ask for promises to be written into the contract or an agreed addendum.
-
-## Offer response workflow
-
-1. Thank the employer and confirm the decision deadline in writing.
-2. Request the full written contract and all referenced policies/attachments.
-3. Compare base gross pay, working time, leave, bonus conditions, equity, benefits, commute, and permit conditions separately.
-4. List any verbal promises and ask whether they can be included in the contract or a signed addendum.
-5. Ask for clarification on ambiguous overtime, remote-work, fixed-term, repayment, or non-compete clauses.
-6. Take reasonable time to review; seek legal advice for high-impact or unclear clauses before signing.
-
-Do not resign from an existing role, pay a recruiter, or provide bank information based only on a verbal offer. Confirm the employer and the final contract through official channels.
+Separate guaranteed pay from contingent bonus/equity; get promises in the contract or signed addendum. Response workflow: thank the employer and confirm the deadline; request the full contract/policies; compare pay, hours, leave, benefits, commute and permit terms; clarify verbal promises and ambiguous clauses; take reasonable review time. Do not resign, pay a recruiter or give bank data based only on a verbal offer; confirm the employer and final contract through official channels.

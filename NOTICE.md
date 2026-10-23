@@ -2,7 +2,7 @@
 
 ## career-ops
 
-Portions of this project adapt general German-market language, negotiation, interview-story, and application-safety guidance from [career-ops](https://github.com/santifer/career-ops), especially [`modes/de/_shared.md`](https://raw.githubusercontent.com/santifer/career-ops/main/modes/de/_shared.md) and [`modes/de/angebot.md`](https://raw.githubusercontent.com/santifer/career-ops/main/modes/de/angebot.md), © 2026 Santiago Fernández de Valderrama, under the MIT License.
+This project adapts German-market language, negotiation, interview-story and application-safety concepts from [career-ops](https://github.com/santifer/career-ops), especially [`modes/de/_shared.md`](https://raw.githubusercontent.com/santifer/career-ops/main/modes/de/_shared.md) and [`modes/de/angebot.md`](https://raw.githubusercontent.com/santifer/career-ops/main/modes/de/angebot.md), © 2026 Santiago Fernández de Valderrama, MIT License.
 
 Adapted portions appear in:
 
@@ -11,7 +11,7 @@ Adapted portions appear in:
 - `skills/berlin-job-search/references/applications-germany.md` — application guardrails
 - `skills/berlin-job-search/references/interviews-and-offers.md` — STAR+R story framework and contract-terms guidance
 
-The adapted material is rewritten in English and generalized beyond AI roles.
+The material is rewritten in English and generalized beyond AI roles.
 
 ```text
 MIT License
@@ -39,7 +39,7 @@ SOFTWARE.
 
 ## job-client / Daily Berlin Jobs
 
-The ATS endpoint patterns, public-board parsing approach, LinkedIn guest parser, and starter company entries in `skills/berlin-job-search/scripts/search.py`, `skills/berlin-job-search/scripts/linkedin.py`, and `skills/berlin-job-search/assets/companies.json` are informed by [job-client / Daily Berlin Jobs](https://github.com/umutyesildal/daily-berlin-jobs), © 2026 Umut Yesildal, MIT License. This skill reimplements the interfaces in Python's standard library; it does not include the original project or its private configuration.
+ATS endpoint patterns, public-board parsing, the LinkedIn guest parser and the starter company catalog in `skills/berlin-job-search/scripts/search.py`, `skills/berlin-job-search/scripts/linkedin.py` and `skills/berlin-job-search/assets/companies.json` are informed by [job-client / Daily Berlin Jobs](https://github.com/umutyesildal/daily-berlin-jobs), © 2026 Umut Yesildal, MIT License. This project reimplements the interfaces with the standard library; it includes neither the original project nor private configuration.
 
 ```text
 MIT License
@@ -67,7 +67,7 @@ SOFTWARE.
 
 ## ai-job-search
 
-The LinkedIn guest-card/detail parsing and request-parameter mapping in `skills/berlin-job-search/scripts/linkedin.py`, its integration in `skills/berlin-job-search/scripts/search.py`, the Freehire endpoint/query mapping, and the first-seen memory concept in `search.py` adapt the MIT-licensed [ai-job-search](https://github.com/ai-job-search-dev/ai-job-search) repository, especially `.agents/skills/linkedin-search/cli/src/`, `.agents/skills/freehire-search/cli/src/`, and the `/rank` state workflow in `tools/rank_state.py` / `.claude/commands/rank.md`. The drafter–reviewer application workflow reimplements the `/apply` review-gate concept; the mock-interview roleplay workflow and post-application outcome/follow-up tracking also adapt product concepts from ai-job-search. The posting-integrity gate in `analyze_jd.py` independently reimplements the concept in `/apply` and `tools/posting_guard.py`; no code is copied from that gate. The repository LICENSE names © 2026 Mads Lorentzen. The new Python CLIs are reimplemented with the standard library and intentionally omit login, cookie, and authenticated workflows.
+LinkedIn guest-card/detail parsing and request mapping, Freehire query mapping and first-seen state adapt [ai-job-search](https://github.com/ai-job-search-dev/ai-job-search), especially `.agents/skills/linkedin-search/cli/src/`, `.agents/skills/freehire-search/cli/src/` and the `/rank` workflow in `tools/rank_state.py` / `.claude/commands/rank.md`. The drafter–reviewer gate, mock-interview roleplay and outcome/follow-up tracker adapt product concepts; the posting-integrity gate independently reimplements `/apply` and `tools/posting_guard.py`. No code is copied from those implementations. The source repository identifies © 2026 Mads Lorentzen and uses the MIT License. This skill's scripts use the standard library and omit login, cookies and authenticated workflows.
 
 Adapted documentation appears in:
 

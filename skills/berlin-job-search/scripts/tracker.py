@@ -10,12 +10,11 @@ import re
 import shutil
 import statistics
 import sys
-import unicodedata
 import uuid
 from pathlib import Path
 from typing import Any, Optional
 
-from search import canonical_url
+from _common import canonical_url, csv_text, json_text, markdown_table, parse_date_or_none, slugify
 
 FIELDS = [
     "id", "date_added", "company", "title", "url", "location", "source", "status",
@@ -78,12 +77,9 @@ def read_rows(path: Path) -> list[dict[str, str]]:
 
 def write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    text = csv_text([normalized_row(row) for row in rows], FIELDS)
     with path.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=FIELDS, extrasaction="ignore")
-        writer.writeheader()
-        for row in rows:
-            normalized = normalized_row(row)
-            writer.writerow(normalized)
+        stream.write(text)
 
 
 def normalize_score(value: Any) -> str:
@@ -132,10 +128,8 @@ def add_job(path: Path, job: dict[str, Any], score: str = "", notes: str = "") -
 def validate_date(value: str) -> str:
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
         raise ValueError("date must use YYYY-MM-DD")
-    try:
-        dt.date.fromisoformat(value)
-    except ValueError as error:
-        raise ValueError("invalid date '{}'".format(value)) from error
+    if parse_date_or_none(value) is None:
+        raise ValueError("invalid date '{}'".format(value))
     return value
 
 
@@ -154,11 +148,6 @@ def read_events(path: Path) -> list[dict[str, Any]]:
             if isinstance(event, dict):
                 events.append(event)
     return events
-
-
-def slugify(value: str) -> str:
-    folded = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii").casefold()
-    return re.sub(r"[^a-z0-9]+", "-", folded).strip("-")[:60] or "job"
 
 
 def archive_folder(root: Path, row: dict[str, Any]) -> Path:
@@ -253,7 +242,7 @@ def record_event(
     event_file = events_path(path.parent)
     event_file.parent.mkdir(parents=True, exist_ok=True)
     with event_file.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(event, ensure_ascii=False) + "\n")
+        stream.write(json_text(event, indent=None) + "\n")
 
     folder = archive_folder(path.parent, row)
     if folder.is_dir():
@@ -263,13 +252,6 @@ def record_event(
         else:
             write_outcome(outcome, row, read_events(event_file))
     return event
-
-
-def parse_date_or_none(value: Any) -> Optional[dt.date]:
-    try:
-        return dt.date.fromisoformat(str(value or ""))
-    except ValueError:
-        return None
 
 
 def followup_candidates(
@@ -396,12 +378,14 @@ def calculate_stats(rows: list[dict[str, str]], events: list[dict[str, Any]]) ->
     for event in events:
         events_by_id.setdefault(str(event.get("id") or ""), []).append(event)
 
-    counts = application_stage_counts(rows, events)
+    counts = {"tracked": len(rows), "applied": 0, "responded": 0, "interview": 0, "offer": 0}
     response_days = []
     for row in rows:
         source = row.get("source") or "(unspecified)"
         by_source[source]["tracked"] += 1
         flags = application_stage_flags(row, events_by_id.get(str(row.get("id") or ""), []))
+        for stage in ("applied", "responded", "interview", "offer"):
+            counts[stage] += int(flags[stage])
         by_source[source]["applied"] += int(flags["applied"])
         by_source[source]["responded"] += int(flags["responded"])
         if not flags["applied"]:
@@ -447,13 +431,7 @@ def print_table(rows: list[dict[str, Any]], columns: Optional[list[str]] = None)
     columns = columns or [
         "id", "company", "title", "location", "status", "score", "next_action", "next_action_date",
     ]
-    print("| " + " | ".join(columns) + " |")
-    print("| " + " | ".join("---" for _ in columns) + " |")
-    for row in rows:
-        print("| " + " | ".join(
-            str(row.get(key) or "").replace("|", "\\|").replace("\n", " ")
-            for key in columns
-        ) + " |")
+    print(markdown_table(columns, [[row.get(key) for key in columns] for row in rows], spaced_separator=True))
 
 
 def command_add(args: argparse.Namespace) -> int:
@@ -540,7 +518,7 @@ def write_fetched_posting(folder: Path, row: dict[str, Any]) -> None:
     json_path = folder / "posting.json"
     markdown_path = folder / "posting.md"
     for path, content in (
-        (json_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n"),
+        (json_path, json_text(payload) + "\n"),
         (markdown_path, "\n".join([
             "# {}".format(detail.get("title") or row.get("title") or "Job posting"),
             "",
@@ -613,21 +591,25 @@ def format_stats_markdown(stats: dict[str, Any]) -> str:
         "",
         "## By status",
         "",
-        "| Status | Count |",
-        "|---|---:|",
     ]
-    lines.extend("| {} | {} |".format(status, count) for status, count in stats["by_status"].items())
-    lines.extend(["", "## By source", "", "| Source | Tracked | Applied | Responded | Response rate |", "|---|---:|---:|---:|---:|"])
-    for source, values in stats["by_source"].items():
-        lines.append("| {} | {} | {} | {} | {}% |".format(
-            source, values["tracked"], values["applied"], values["responded"], values["response_rate_pct"],
-        ))
+    lines.append(markdown_table(
+        ["Status", "Count"],
+        [[status, count] for status, count in stats["by_status"].items()],
+        separators=["---", "---:"],
+    ))
+    lines.extend(["", "## By source", ""])
+    lines.append(markdown_table(
+        ["Source", "Tracked", "Applied", "Responded", "Response rate"],
+        [[source, values["tracked"], values["applied"], values["responded"], "{}%".format(values["response_rate_pct"])]
+         for source, values in stats["by_source"].items()],
+        separators=["---", "---:", "---:", "---:", "---:"],
+    ))
     return "\n".join(lines)
 
 
 def command_stats(args: argparse.Namespace) -> int:
     stats = calculate_stats(read_rows(tracker_path()), read_events(events_path()))
-    output = json.dumps(stats, ensure_ascii=False, indent=2) if args.format == "json" else format_stats_markdown(stats)
+    output = json_text(stats) if args.format == "json" else format_stats_markdown(stats)
     print(output)
     return 0
 

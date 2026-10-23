@@ -1,5 +1,4 @@
 ---
-# generated from commands/setup.md, do not edit.
 description: Set up your job search in Germany (goals, city, permit, languages, CV) and run a first search
 argument-hint: "[optional: role and city, e.g. 'nurse in Hamburg']"
 ---
