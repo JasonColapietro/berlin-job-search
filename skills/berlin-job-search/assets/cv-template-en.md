@@ -36,8 +36,9 @@ website: https://example.com
 
 - [Relevant focus or project.]
 
-## Skills
+## Skills & tools
 
-- **Technical:** [Technology], [method], [tool]
+- **Relevant skills:** [Role-related methods, e.g. candidate sourcing, client service, scheduling, bookkeeping, care practice, or trade skills.]
+- **Systems & tools:** [ATS, CRM, office systems, or other tools you have actually used.]
 - **Languages:** English [CEFR level], German [CEFR level]
 - **Additional:** [Relevant certification or practice]

@@ -341,7 +341,7 @@ def check_personal_data(text: str) -> dict[str, Any]:
 
 def check_letter(text: str, pages: Optional[int]) -> list[dict[str, Any]]:
     checks = []
-    subject = bool(re.search(r"^\s*(?:betreff\s*:|subject\s*:|re\s*:)", text, re.I | re.M))
+    subject = bool(re.search(r"\b(?:betreff|subject|re)\s*:", text, re.I))
     salutation = bool(re.search(r"\b(?:sehr geehrte[rs]?|guten tag|dear)\b", text, re.I))
     closing = bool(re.search(
         r"\b(?:mit freundlichen grüßen|mit freundlichen gruessen|kind regards|best regards)\b",

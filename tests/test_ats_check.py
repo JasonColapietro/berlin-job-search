@@ -10,6 +10,7 @@ SCRIPTS = ROOT / "skills" / "berlin-job-search" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import ats_check
+import render_doc
 
 
 class AtsCheckTests(unittest.TestCase):
@@ -84,6 +85,38 @@ Alex Example
         self.assertEqual(checks["letter_closing"]["status"], "ok")
         self.assertEqual(checks["letter_pages"]["status"], "ok")
         self.assertEqual(checks["keywords"]["status"], "info")
+
+    def test_rendered_letter_html_subject_is_detected(self):
+        cases = (
+            ("en", "Application for a fictional role", "Dear Hiring Team,", "Kind regards,"),
+            ("de", "Bewerbung um eine fiktive Stelle", "Sehr geehrte Damen und Herren,", "Mit freundlichen Grüßen"),
+        )
+        for lang, subject, salutation, closing in cases:
+            document = """---
+name: Alex Example
+email: alex@example.test
+subject: {subject}
+---
+
+{salutation}
+
+I am applying for this fictional role.
+
+{closing}
+
+Alex Example
+""".format(subject=subject, salutation=salutation, closing=closing)
+            html_text = render_doc.render_html(document, "letter", "modern", lang)
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "letter.html"
+                path.write_text(html_text, encoding="utf-8")
+                text, pages = ats_check.extract_text(path)
+            checks = {
+                item["check"]: item
+                for item in ats_check.analyze_document(text, "letter", pages, [])["checks"]
+            }
+            with self.subTest(lang=lang):
+                self.assertEqual(checks["letter_subject"]["status"], "ok")
 
     def test_personal_data_check_is_informational(self):
         result = ats_check.check_personal_data(

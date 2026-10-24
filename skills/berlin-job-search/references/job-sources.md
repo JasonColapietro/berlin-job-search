@@ -23,7 +23,7 @@
 | International | [Make it in Germany jobs](https://www.make-it-in-germany.com/en/working-in-germany/job-listings) | International applicants and relocation | Yes | Browser |
 | International | [EURES](https://eures.europa.eu/jobseekers_en) | EU/EEA cross-border work and mobility | Partly | Browser |
 | Berlin startup | [BerlinStartupJobs](https://berlinstartupjobs.com/) | Berlin startup roles | Yes/partly | Browser |
-| Berlin tech | [Daily Berlin Jobs](https://daily-berlin-jobs.vercel.app/jobs.md) | Curated engineering roles; API, RSS, Markdown and MCP access | Partly | API / browser |
+| Berlin tech | [Daily Berlin Jobs (Berlin tech jobs)](https://daily-berlin-jobs.vercel.app/jobs.md) | Curated Berlin software, data/AI and engineering roles; not a general Berlin jobs source; API, RSS, Markdown and MCP access | Partly | API / browser |
 | Berlin tech | [pegel.berlin](https://pegel.berlin/) | Startup/tech vacancies; Cloudflare challenge | Partly `(verify)` | Browser |
 | Berlin startup | [Job Drop Berlin](https://jobdropberlin.com/) | Startup roles and market snapshots | Yes/partly | Browser |
 | Berlin tech | [Tech in Berlin](https://techinberlin.com/) | Technology vacancies and employer research | Yes/partly | Browser |

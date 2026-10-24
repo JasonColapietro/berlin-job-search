@@ -5,7 +5,7 @@ locations:
   radius_km: 25
   relocate: false
 remote_preference: "hybrid"
-citizenship: "non_eu" # eu | non_eu
+citizenship: null # eu | non_eu | other (null = unknown)
 residence_permit: ""
 german_level: "" # CEFR: A1-C2
 english_level: "" # CEFR: A1-C2

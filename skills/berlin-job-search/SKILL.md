@@ -1,6 +1,6 @@
 ---
 name: berlin-job-search
-description: Job-search coach for Berlin and the rest of Germany. Searches live postings through keyless sources (Bundesagentur für Arbeit, Daily Berlin Jobs, Arbeitnow, company ATS boards, LinkedIn guest jobs) and browser recipes for StepStone, Indeed, XING and hiring.cafe; checks German-language requirements, Blue Card salary thresholds and fit; writes a German Lebenslauf/Anschreiben or English CV as PDF; runs mock interviews; tracks applications and follow-ups; explains visas, salaries, contracts and unemployment support. Use when the user wants a job in Germany or a German city, mentions Jobsuche, Stellenanzeige, Bewerbung, Lebenslauf, Werkstudent, Ausbildung, Blue Card, Chancenkarte, Arbeitslosengeld or jobs without German, or asks to search, evaluate or apply to jobs in Germany.
+description: Job-search coach for Berlin and the rest of Germany. Searches live postings through keyless sources (Bundesagentur für Arbeit, Arbeitnow, LinkedIn guest jobs, plus Daily Berlin Jobs and company ATS boards for Berlin tech roles) and browser recipes for StepStone, Indeed, XING and hiring.cafe; checks German-language requirements, Blue Card salary thresholds and fit; writes a German Lebenslauf/Anschreiben or English CV as PDF; runs mock interviews; tracks applications and follow-ups; explains visas, salaries, contracts and unemployment support. Use when the user wants a job in Germany or a German city, mentions Jobsuche, Stellenanzeige, Bewerbung, Lebenslauf, Werkstudent, Ausbildung, Blue Card, Chancenkarte, Arbeitslosengeld or jobs without German, or asks to search, evaluate or apply to jobs in Germany.
 license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:
@@ -31,14 +31,30 @@ Route each request to one workflow below and load only the reference files it na
    refresh it from the cited source.
 7. **Answer in the user's language** (or `output_language` from the profile). Explain German terms
    on first use.
+8. **Keep the user oriented.** After each workflow step, and at least every ~10 minutes or ~8 tool
+   calls in long tasks, give a 2–4 line update: what was done, what was found (numbers), what
+   comes next, and anything you need from them. Never run silently for long stretches.
+9. **Everything lands in Markdown.** Every result you show also goes into a file under
+   `job-search/` (paths below), so the user can reopen, share or print it. After each workflow,
+   append a dated entry to `job-search/progress.md`: what was done, the key findings, the files
+   written, and the open questions.
 
 ## Paths
 
 - Run scripts as `python3 "$SKILL_DIR/scripts/<script>.py"`, where `SKILL_DIR` is this file's
   folder. Every script has `--help`.
-- User data lives in `./job-search/` (or `$GJS_DATA_DIR`): `profile.yml`, `cv.md`,
-  `tracker.csv`, `events.jsonl`, `seen.json`, `searches/`, `reports/`, `applications/`,
-  `interview-prep/`, `report.html`. Never write user data into `SKILL_DIR`.
+- User data lives in `./job-search/` (or `$GJS_DATA_DIR`). Never write user data into `SKILL_DIR`.
+
+  | File | Holds |
+  |---|---|
+  | `profile.yml`, `cv.md` | Confirmed facts about the user |
+  | `progress.md` | Running session log (ground rule 9) |
+  | `shortlists/YYYY-MM-DD-<topic>.md` | Shortlist tables with links |
+  | `reports/YYYY-MM-DD-<company>-<role>.md` | Job evaluations |
+  | `applications/` | Drafts, rendered PDFs, one archive folder per application |
+  | `interview-prep/` | Story bank, mock-interview transcripts and feedback |
+  | `plans/` | Gap analysis, salary and visa notes |
+  | `searches/*.json`, `seen.json`, `tracker.csv`, `events.jsonl`, `report.html` | Machine data |
 
 ## Step 0: Know the user
 
@@ -83,35 +99,50 @@ These facts change everything:
    Engineer* + *Softwareentwickler*, *Nurse* → *Pflegefachkraft*, *Accountant* → *Buchhalter*,
    *Warehouse worker* → *Lagermitarbeiter*. Add *Werkstudent* for students and *Ausbildung* for
    apprenticeships.
-2. **Run** each query:
+2. **Pick sources for the field.** `dailyberlinjobs`, `ats` and `freehire` only list **tech,
+   engineering and data roles**. For anything else (recruiting/HR, sales, marketing, finance,
+   operations, healthcare, trades, hospitality) never show their results; use
+   `--sources ba,arbeitnow,linkedin`.
+
+   | Field | Sources | Title filter |
+   |---|---|---|
+   | Software, data, IT | defaults (`dailyberlinjobs,ba,arbeitnow,ats,linkedin`) | off (skill words like "Python" appear outside titles) |
+   | Everything else | `--sources ba,arbeitnow,linkedin` | `--title-match` (BA matches its full text loosely) |
+3. **Run** each query:
    ```bash
-   python3 "$SKILL_DIR/scripts/search.py" --what "Softwareentwickler" --where Berlin --days 14 \
-     --seen-file job-search/seen.json --format json --out job-search/searches/$(date +%F)-swe.json
+   python3 "$SKILL_DIR/scripts/search.py" --what "Recruiter" --where Berlin --days 14 \
+     --sources ba,arbeitnow,linkedin --title-match \
+     --seen-file job-search/seen.json --format json --out job-search/searches/$(date +%F)-recruiter.json
    ```
-   Default sources: `dailyberlinjobs` (about 1,500 Berlin tech jobs, daily; Berlin searches
-   only), `ba`, `arbeitnow`, `ats` (`assets/companies.json`), `linkedin` (one guest page).
-   `freehire` is opt-in for tech. Flags: `--english-only`, `--remote`, `--with-description`,
-   `--only-new`, `--limit`. Report any source marked failed in `meta.sources` and carry on.
-   LinkedIn returns HTTP 999 from cloud or VPN IPs; fall back to browser recipes or search links.
-3. **Go deeper when useful:** `scripts/linkedin.py search|detail` for LinkedIn filters and full
+   Flags: `--english-only`, `--remote`, `--with-description`, `--only-new`, `--limit`. Report any
+   source marked failed in `meta.sources` and carry on. LinkedIn returns HTTP 999 from cloud or
+   VPN IPs; fall back to browser recipes or search links. For non-tech fields also hand the user
+   the StepStone, Indeed and XING links from `references/browser-search.md`; those portals carry
+   most of those jobs.
+4. **Go deeper when useful:** `scripts/linkedin.py search|detail` for LinkedIn filters and full
    text. `references/browser-search.md` for the other portals.
-4. **Filter** against the profile. Flag agency/Zeitarbeit ads, which are common in BA results;
+5. **Filter for relevance, then against the profile.** Drop every job whose title isn't the
+   target role or a close variant (a recruiter search must not show engineers hired *by* staffing
+   firms). Say how many you dropped. Flag agency/Zeitarbeit ads, which are common in BA results;
    don't hide them.
-5. **Score** with the quick score (`references/evaluating-jobs.md`). Fetch details for the top ~10
+6. **Score** with the quick score (`references/evaluating-jobs.md`). Fetch details for the top ~10
    with `scripts/job_detail.py` so the checks run on full text.
-6. **Present** a shortlist: score, job (link), company, city, remote, German required, salary or
-   "not stated", visa check for non-EU users, and one line on fit and the main gap.
-7. **Offer** next steps: track, evaluate, apply, outreach, or portal alerts (the user creates
+7. **Present and save** a shortlist to `job-search/shortlists/YYYY-MM-DD-<topic>.md`: score, job
+   (link), company, city, remote, German required (with the quoted evidence), salary or "not
+   stated", visa check for non-EU users, and one line on fit and the main gap. Include the
+   searches you ran and the per-source counts.
+8. **Offer** next steps: track, evaluate, apply, outreach, or portal alerts (the user creates
    them from the filters you give).
 
-For a daily check, rerun saved queries with `--only-new --days 2`. Daily Berlin Jobs updates once
-a day, around 06:00–07:30 Berlin time.
+For a daily check, rerun saved queries with `--only-new --days 2`. Daily Berlin Jobs (Berlin tech
+roles only) updates once a day, around 06:00–07:30 Berlin time.
 
 **When scripts can't reach the network** (Claude Desktop and claude.ai sandboxes allow only package
 registries by default; errors look like connection refused, proxy 403 or DNS failures), keep
 helping with the tools you do have:
 - **Daily Berlin Jobs connector** (bundled with the plugin): use `search_jobs`, `get_job`,
-  `get_status` and `list_companies` for Berlin tech roles.
+  `get_status` and `list_companies`, **for Berlin tech roles only**. Its keyword search also
+  matches company names: "talent" returns engineering jobs posted by staffing firms.
 - **Web fetch** for public GET endpoints:
   - `https://daily-berlin-jobs.vercel.app/api/v1/jobs?q=<term>&format=md` (also accepts `role`,
     `level`, `work_mode`, `since`)

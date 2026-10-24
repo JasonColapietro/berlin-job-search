@@ -29,6 +29,13 @@ from analyze_jd import analyze
 
 DEFAULT_COMPANIES = Path(__file__).resolve().parent.parent / "assets" / "companies.json"
 DEFAULT_SOURCES = ("dailyberlinjobs", "ba", "arbeitnow", "ats", "linkedin")
+TITLE_MATCH_STOP_WORDS = frozenset({
+    "manager", "senior", "junior", "lead", "head", "specialist", "associate", "partner",
+    "consultant", "assistant", "mitarbeiter", "mitarbeiterin", "intern", "internship",
+    "werkstudent", "working", "student", "praktikant", "praktikum", "gn", "mwd", "all",
+    "genders", "the", "and", "with", "for", "und", "mit", "fur",
+})
+TITLE_MATCH_FOLD = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
 
 def make_job(
@@ -455,19 +462,67 @@ def filter_jobs(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[di
             broad_remote = args.remote and any(token in location for token in ("germany", "remote", "deutschland"))
             if city not in location and not broad_remote:
                 continue
-        title_terms = re.findall(r"\w+", (job.get("title") or "").casefold())
-        if job.get("source") == "arbeitnow":
-            title_terms += re.findall(r"\w+", (job.get("_tags") or "").casefold())
-        if job.get("source") == "dailyberlinjobs":
-            title_terms += re.findall(r"\w+", " ".join(job.get("tech_stack") or []).casefold())
-        if job.get("source") in {"ats", "dailyberlinjobs"} and any(
-            word not in " ".join(title_terms) for word in query_words
-        ):
-            continue
-        if job.get("source") == "arbeitnow" and any(word not in " ".join(title_terms) for word in query_words):
-            continue
+        if not getattr(args, "title_match", False):
+            title_terms = re.findall(r"\w+", (job.get("title") or "").casefold())
+            if job.get("source") == "arbeitnow":
+                title_terms += re.findall(r"\w+", (job.get("_tags") or "").casefold())
+            if job.get("source") == "dailyberlinjobs":
+                title_terms += re.findall(r"\w+", " ".join(job.get("tech_stack") or []).casefold())
+            if job.get("source") in {"ats", "dailyberlinjobs"} and any(
+                word not in " ".join(title_terms) for word in query_words
+            ):
+                continue
+            if job.get("source") == "arbeitnow" and any(
+                word not in " ".join(title_terms) for word in query_words
+            ):
+                continue
         filtered.append(job)
     return filtered
+
+
+def title_words(value: Any) -> list[str]:
+    normalized = str(value or "").casefold().translate(TITLE_MATCH_FOLD)
+    words = []
+    current = []
+    for char in normalized:
+        if char.isalnum():
+            current.append(char)
+        elif current:
+            words.append("".join(current))
+            current = []
+    if current:
+        words.append("".join(current))
+    return words
+
+
+def title_match_terms(query: str) -> tuple[list[str], bool]:
+    words = title_words(query)
+    terms = [
+        word for word in words
+        if len(word) >= 3 and word not in TITLE_MATCH_STOP_WORDS
+    ]
+    if terms:
+        return terms, False
+    phrase = " ".join(words)
+    return ([phrase] if phrase else []), True
+
+
+def title_matches(query: str, title: Any) -> bool:
+    terms, phrase_fallback = title_match_terms(query)
+    words = title_words(title)
+    if not terms or not words:
+        return False
+    if phrase_fallback:
+        phrase = terms[0].split()
+        return any(
+            words[index:index + len(phrase)] == phrase
+            for index in range(len(words) - len(phrase) + 1)
+        )
+    return any(
+        any(word.startswith(term[:max(6, len(term) - 3)]) for word in words)
+        if len(term) >= 7 else term in words
+        for term in terms
+    )
 
 
 def freehire_salary(enrichment: dict[str, Any]) -> Optional[str]:
@@ -907,6 +962,7 @@ def run_search(params: dict[str, Any]) -> dict[str, Any]:
         "format": "json",
         "out": None,
         "with_description": False,
+        "title_match": False,
     }
     values.update(params)
     args = argparse.Namespace(**values)
@@ -980,6 +1036,11 @@ def run_search(params: dict[str, Any]) -> dict[str, Any]:
         )
         statuses[source].update(source_metadata.get(source, {}))
         all_jobs.extend(filtered_source)
+    title_filtered = 0
+    if args.title_match:
+        matched_jobs = [job for job in all_jobs if title_matches(args.what, job.get("title"))]
+        title_filtered = len(all_jobs) - len(matched_jobs)
+        all_jobs = matched_jobs
     for job in all_jobs:
         job.pop("_tags", None)
     unique = deduplicate_jobs(all_jobs)
@@ -995,6 +1056,8 @@ def run_search(params: dict[str, Any]) -> dict[str, Any]:
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "sources": statuses,
     }
+    if args.title_match:
+        meta["title_filtered"] = title_filtered
     return {"meta": meta, "jobs": unique}
 
 
@@ -1005,18 +1068,20 @@ def main() -> int:
     parser.add_argument("--radius", type=int, default=25, help="BA search radius in km (default: 25)")
     parser.add_argument("--days", type=int, default=7, help="Posting age window in days (default: 7)")
     parser.add_argument("--sources", default=",".join(DEFAULT_SOURCES),
-                        help="Comma-separated sources: dailyberlinjobs,ba,arbeitnow,ats,linkedin,freehire (default: dailyberlinjobs,ba,arbeitnow,ats,linkedin)")
+                        help="Comma-separated sources: dailyberlinjobs (Daily Berlin Jobs (Berlin tech jobs)), ba,arbeitnow,ats,linkedin,freehire (default: dailyberlinjobs,ba,arbeitnow,ats,linkedin)")
     parser.add_argument("--companies", default=str(DEFAULT_COMPANIES),
                         help="ATS company catalog JSON (default: ../assets/companies.json)")
     parser.add_argument("--remote", action="store_true", help="Keep explicitly remote postings")
     parser.add_argument("--english-only", action="store_true", help="Drop ads where German is required")
+    parser.add_argument("--title-match", action="store_true",
+                        help="Keep jobs whose title matches any normalized query term")
     parser.add_argument("--limit", type=int, default=100, help="Maximum number of output jobs (default: 100)")
     parser.add_argument("--max-pages", type=int, default=3,
                         help="Maximum pages for BA, Arbeitnow, and Freehire (default: 3)")
     parser.add_argument("--linkedin-pages", type=int, default=1,
                         help="LinkedIn pages per query, capped at 5 (default: 1)")
-    parser.add_argument("--dbj-role", help="Daily Berlin Jobs role filter (comma-separated status values)")
-    parser.add_argument("--dbj-level", help="Daily Berlin Jobs level filter (comma-separated status values)")
+    parser.add_argument("--dbj-role", help="Daily Berlin Jobs (Berlin tech jobs) role filter (comma-separated status values)")
+    parser.add_argument("--dbj-level", help="Daily Berlin Jobs (Berlin tech jobs) level filter (comma-separated status values)")
     parser.add_argument("--seen-file", help="Local JSON memory of previously seen job URLs and identities")
     parser.add_argument("--only-new", action="store_true", help="Show only jobs not present in --seen-file")
     parser.add_argument("--format", choices=("md", "json", "csv"), default="md", metavar="md|json|csv",
@@ -1049,6 +1114,9 @@ def main() -> int:
     write_output(output, args.out)
     for source, status in statuses.items():
         print(source_status_line(source, status), file=sys.stderr)
+    if args.title_match:
+        count = result["meta"]["title_filtered"]
+        print("title-match: dropped {} job{}".format(count, "" if count == 1 else "s"), file=sys.stderr)
     return 0
 
 

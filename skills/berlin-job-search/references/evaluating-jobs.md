@@ -104,8 +104,9 @@ time, Werkstudent...), seniority, team (if stated), ad language, and a one-sente
   Cite `visa-and-work-permits.md`.
 - **Agency / Zeitarbeit:** who the actual employer is, *Arbeitnehmerüberlassung* implications,
   and whether a takeover (*Übernahme*) is mentioned.
-- **Contract signals:** *befristet* and its length, *Probezeit*, vacation days (below 25 is
-  below market for office jobs, 28–30 is common in tech), 13th salary, *Tarifvertrag* /
+- **Contract signals:** *befristet* and its length, *Probezeit*, vacation days (the legal
+  minimum is 20 on a 5-day week; below 25 is below market for office jobs; 28–30 is common in
+  larger companies and under collective agreements), 13th salary, *Tarifvertrag* /
   *AT*, bAV, VWL, home-office policy, relocation support, visa support.
 
 ### D. Compensation

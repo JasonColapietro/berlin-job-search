@@ -39,7 +39,7 @@ codex plugin marketplace add umutyesildal/berlin-job-search
 codex plugin add berlin-job-search@berlin-job-search
 ```
 
-**Claude Desktop and claude.ai:** add the plugin from **Customize → Plugins** once it is listed. Claude's chat sandbox blocks most outbound requests, so live search there uses the bundled Daily Berlin Jobs connector and Claude's web search; the full multi-source search runs in Claude Code or Codex.
+**Claude Desktop and claude.ai:** add the plugin from **Customize → Plugins** once it is listed. Claude's chat sandbox blocks most outbound requests, so live search there uses the bundled Daily Berlin Jobs (Berlin tech jobs) connector and Claude's web search; the full multi-source search runs in Claude Code or Codex.
 
 **Use this repo as a workspace:** clone it, start an agent and say “set up my job search.” Personal data belongs in the gitignored `job-search/` directory.
 
@@ -82,7 +82,7 @@ Other agents can install the skill and use it directly in chat.
 
 | Source | Coverage | Access and freshness |
 |---|---|---|
-| Daily Berlin Jobs | Berlin technology roles | Public API; about 1,500 listings, refreshed daily; check `/api/v1/status`. |
+| Daily Berlin Jobs (Berlin tech jobs) | Berlin software, data/AI and engineering roles | Public API; about 1,500 listings, refreshed daily; check `/api/v1/status`. |
 | Bundesagentur für Arbeit (BA Jobsuche) | Germany-wide | Public API; verify at the employer. |
 | Arbeitnow | Germany and nearby markets | Public API; confirm the original posting date. |
 | 33 company boards | Greenhouse, Lever, Ashby, Personio, SmartRecruiters, Recruitee, Workable and JOIN | Public ATS APIs; new boards need a successful live fetch. |
@@ -95,7 +95,7 @@ Other agents can install the skill and use it directly in chat.
 | Destination | When |
 |---|---|
 | `rest.arbeitsagentur.de`, `www.arbeitsagentur.de` | BA search and job details |
-| `daily-berlin-jobs.vercel.app` | Daily Berlin Jobs API and the bundled read-only MCP connector |
+| `daily-berlin-jobs.vercel.app` | Daily Berlin Jobs (Berlin tech jobs) API and the bundled read-only MCP connector |
 | `www.arbeitnow.com` | Arbeitnow search |
 | `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`, `*.jobs.personio.de`, `api.smartrecruiters.com`, `*.recruitee.com`, `apply.workable.com`, `join.com` | Company boards listed in `assets/companies.json` |
 | `www.linkedin.com` | Logged-out guest job search (local CLI, low volume) |

@@ -38,6 +38,50 @@ class JobDetailTests(unittest.TestCase):
         self.assertIn("hidden_html", issue_types)
         self.assertIn("instruction_text", issue_types)
 
+    def test_jsonld_analysis_uses_title_and_employer_name(self):
+        detail = jsonld_detail(
+            {
+                "@type": "JobPosting",
+                "title": "Recruiter with German",
+                "hiringOrganization": {"name": "Example Personalvermittlung GmbH"},
+                "description": "We are looking for a recruiter.",
+            },
+            "https://jobs.example/recruiter",
+        )
+        self.assertEqual(detail["analysis"]["german_required"], "required")
+        self.assertEqual(detail["analysis"]["german_evidence"], ["Recruiter with German"])
+        self.assertTrue(detail["analysis"]["agency_or_temp"])
+        self.assertTrue(any("Example Personalvermittlung GmbH" in item for item in detail["analysis"]["agency_evidence"]))
+
+    def test_jsonld_salary_without_numeric_amount_is_null(self):
+        detail = jsonld_detail(
+            {
+                "@type": "JobPosting",
+                "title": "Fictional role",
+                "hiringOrganization": {"name": "Example Company"},
+                "description": "A fictional job.",
+                "baseSalary": {"currency": "EUR", "value": {"unitText": "YEAR"}},
+            },
+            "https://jobs.example/role",
+        )
+        self.assertIsNone(detail["base_salary"])
+
+    def test_linkedin_detail_passes_title_and_employer_to_analysis(self):
+        posting = {
+            "title": "Recruiter with German",
+            "company": "Example Personalvermittlung GmbH",
+            "description": "We are looking for a recruiter.",
+            "analysis": {"integrity": {"ok": True, "issues": []}, "german_required": "unknown"},
+        }
+        with patch.object(job_detail, "fetch_linkedin_job_detail", return_value=posting), \
+                patch.object(job_detail, "warn_tos"):
+            detail = job_detail.linkedin_detail("https://www.linkedin.com/jobs/view/123")
+
+        self.assertEqual(detail["analysis"]["german_required"], "required")
+        self.assertEqual(detail["analysis"]["german_evidence"], ["Recruiter with German"])
+        self.assertTrue(detail["analysis"]["agency_or_temp"])
+        self.assertEqual(detail["analysis"]["integrity"], {"ok": True, "issues": []})
+
     def test_daily_berlin_jobs_ats_paths_use_json_detail_and_integrity(self):
         record = json.loads((Path(__file__).parent / "fixtures" / "dbj_detail_ats.json").read_text(encoding="utf-8"))
         paths = (

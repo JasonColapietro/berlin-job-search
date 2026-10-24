@@ -22,11 +22,12 @@ website: https://example.com
 |---|---|
 | MM/YYYY–MM/YYYY | **[Abschluss oder Ausbildung] — [Fiktive Hochschule oder Ausbildungsstätte], [Ort]**<br>[Schwerpunkt oder relevantes Projekt.] |
 
-## Kenntnisse
+## Kenntnisse & Werkzeuge
 
 | Bereich | Kenntnisse |
 |---|---|
-| Fachlich | [Technologie], [Methode], [Werkzeug] |
+| Fachliche Kenntnisse | [Rollenbezogene Methoden, z. B. Kandidatensuche, Kundenbetreuung, Terminplanung, Buchhaltung, Pflegepraxis oder Handwerk.] |
+| Systeme & Werkzeuge | [ATS, CRM, Büro- oder andere berufsspezifische Systeme, die Sie tatsächlich genutzt haben.] |
 | Sprachen | Deutsch [CEFR-Niveau], Englisch [CEFR-Niveau] |
 
 ## Weitere Angaben

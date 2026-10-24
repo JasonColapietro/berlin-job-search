@@ -42,7 +42,9 @@ class AnalyzeJobAdTests(unittest.TestCase):
             "No German required. Fluent German is a plus.",
         ):
             with self.subTest(text=text):
-                self.assertEqual(analyze(text)["german_required"], "nice_to_have")
+                result = analyze(text)
+                self.assertEqual(result["german_required"], "nice_to_have")
+                self.assertTrue(result["german_evidence"])
 
     def test_not_required_phrasings(self):
         for text in (
@@ -107,12 +109,23 @@ class AnalyzeJobAdTests(unittest.TestCase):
         for phrase in (
             "Personaldienstleister", "Arbeitnehmerüberlassung", "Zeitarbeit",
             "im Auftrag unseres Kunden", "for our client", "on behalf of our client",
+            "Arbeitsvermittlung", "Personalvermittlung", "Personaldienstleistungsunternehmen",
+            "Personalberatung", "[Arbeitgeber]", "unser Kunde",
         ):
             with self.subTest(phrase=phrase):
                 result = analyze("This role is advertised by a {}.".format(phrase))
                 self.assertTrue(result["agency_or_temp"])
                 self.assertTrue(result["agency_evidence"])
+        self.assertTrue(analyze("Join our team.", employer_name="PerZukunft Arbeitsvermittlung GmbH")["agency_or_temp"])
+        self.assertTrue(analyze("Join our team.", employer_name="Beispiel Personalberatung GmbH")["agency_or_temp"])
         self.assertFalse(analyze("Join our internal team in Berlin.")["agency_or_temp"])
+        for text in ("Du berätst unsere Kunden am Telefon.", "Mit unseren Kunden arbeitest du eng zusammen."):
+            self.assertFalse(analyze(text)["agency_or_temp"], text)
+        for text in ("Für unseren Kunden, ein Mittelständler, suchen wir dich.", "Unser Kunde ist ein Hersteller."):
+            self.assertTrue(analyze(text)["agency_or_temp"], text)
+        self.assertFalse(
+            analyze("Du bringst Erfahrung in einem Wachstumsunternehmen oder der Personalvermittlung mit.")["agency_or_temp"]
+        )
 
     def test_remote_hybrid_and_onsite(self):
         self.assertEqual(analyze("We offer fully remote work in Germany.")["remote_mode"], "remote")
@@ -337,12 +350,20 @@ class AnalyzeJobAdTests(unittest.TestCase):
             "Deutschkenntnisse (mind. B2) sind Voraussetzung.",
             "Excellent German language skills are required.",
             "Proficiency in German is needed.",
+            "Excellent written and verbal communication skills in English and German.",
+            "Fluent in German and English.",
+            "Deutsch und Englisch auf C2 bzw. C1-Niveau.",
+            "Sehr gute Deutschkenntnisse, gute Englischkenntnisse von Vorteil.",
+            "Verhandlungssichere Deutsch- und Englischkenntnisse.",
+            "Du sprichst fließend Deutsch und sehr gutes Englisch.",
+            "Deine sehr guten Deutsch- und Englischkenntnisse sind erforderlich.",
         )
         for text in cases:
             with self.subTest(text=text):
                 result = analyze(text)
                 self.assertEqual(result["german_required"], "required")
                 self.assertFalse(result["inferred"])
+                self.assertIn(text, result["german_evidence"])
         self.assertEqual(
             analyze("Deutschkenntnisse ein Plus.")["german_required"],
             "nice_to_have",
@@ -350,6 +371,40 @@ class AnalyzeJobAdTests(unittest.TestCase):
         unrelated = analyze("We are a German company serving the German market.")
         self.assertEqual(unrelated["german_required"], "unknown")
         self.assertFalse(unrelated["inferred"])
+
+    def test_german_title_signals_are_explicit_requirements(self):
+        for title in (
+            "German Speaker Recruiter",
+            "Recruiter with German",
+            "German-speaking Talent Partner",
+            "Deutschsprachige Recruiterin",
+        ):
+            with self.subTest(title=title):
+                result = analyze("English-language job text.", title=title)
+                self.assertEqual(result["german_required"], "required")
+                self.assertFalse(result["inferred"])
+                self.assertEqual(result["german_evidence"], [title])
+
+    def test_german_evidence_stays_with_its_bullet_and_language_clause(self):
+        result = analyze(
+            "Responsibilities • Sehr gute Deutschkenntnisse, gute Englischkenntnisse von Vorteil "
+            "• Gute MS Office-Kenntnisse."
+        )
+        self.assertEqual(result["german_required"], "required")
+        self.assertEqual(
+            result["german_evidence"],
+            ["Sehr gute Deutschkenntnisse, gute Englischkenntnisse von Vorteil"],
+        )
+
+    def test_long_ad_evidence_keeps_the_explicit_language_clause(self):
+        result = analyze(
+            "Earlier role requirements. " + ("Additional duties and responsibilities. " * 20)
+            + "Verhandlungssichere Deutsch- und Englischkenntnisse"
+            + (" further posting text" * 20)
+        )
+        self.assertEqual(result["german_required"], "required")
+        self.assertIn("Verhandlungssichere Deutsch- und Englischkenntnisse", result["german_evidence"][0])
+        self.assertLess(len(result["german_evidence"][0]), 100)
 
 
 if __name__ == "__main__":

@@ -81,8 +81,15 @@ def value_text(value: Any) -> str:
     return str(value or "")
 
 
+def numeric_salary_text(value: Any) -> Optional[str]:
+    text = str(value or "").strip()
+    return text if re.search(r"\d", text) else None
+
+
 def jsonld_detail(data: dict[str, Any], url: str) -> dict[str, Any]:
     company = data.get("hiringOrganization") or {}
+    company_name = value_text(company.get("name") if isinstance(company, dict) else company)
+    title = value_text(data.get("title"))
     locations = data.get("jobLocation") or data.get("jobLocationType") or []
     if isinstance(locations, dict):
         locations = [locations]
@@ -103,11 +110,12 @@ def jsonld_detail(data: dict[str, Any], url: str) -> dict[str, Any]:
             salary_text = "{} {} {}".format(salary_text, salary.get("currency", "EUR"), unit or "").strip()
         else:
             salary_text = value_text(amount)
+    salary_text = numeric_salary_text(salary_text)
     raw_description = html.unescape(str(data.get("description") or ""))
     description = strip_html(raw_description)
     return {
-        "title": value_text(data.get("title")),
-        "company": value_text(company.get("name") if isinstance(company, dict) else company),
+        "title": title,
+        "company": company_name,
         "location": " / ".join(filter(None, place_names)),
         "date_posted": value_text(data.get("datePosted")) or None,
         "valid_through": value_text(data.get("validThrough")) or None,
@@ -115,7 +123,7 @@ def jsonld_detail(data: dict[str, Any], url: str) -> dict[str, Any]:
         "base_salary": salary_text,
         "description_text": description,
         "url": url,
-        "analysis": analyze(raw_description),
+        "analysis": analyze(raw_description, title=title, employer_name=company_name),
     }
 
 
@@ -209,15 +217,20 @@ def warn_tos() -> None:
 def linkedin_detail(address: str) -> dict[str, Any]:
     warn_tos()
     detail = fetch_linkedin_job_detail(address)
-    analysis = detail.get("analysis") or analyze(detail.get("description") or "")
+    title = detail.get("title") or ""
+    company = detail.get("company") or ""
+    analysis = analyze(detail.get("description") or "", title=title, employer_name=company)
+    existing_analysis = detail.get("analysis")
+    if isinstance(existing_analysis, dict) and "integrity" in existing_analysis:
+        analysis["integrity"] = existing_analysis["integrity"]
     return {
-        "title": detail.get("title") or "",
-        "company": detail.get("company") or "",
+        "title": title,
+        "company": company,
         "location": detail.get("location") or "",
         "date_posted": detail.get("date"),
         "valid_through": None,
         "employment_type": detail.get("employment_type"),
-        "base_salary": (analysis.get("salary") or {}).get("raw"),
+        "base_salary": numeric_salary_text((analysis.get("salary") or {}).get("raw")),
         "description_text": detail.get("description") or "",
         "url": detail.get("url") or address,
         "analysis": analysis,
@@ -234,9 +247,11 @@ def fetch_daily_berlin_job(address: str, job_id: str) -> dict[str, Any]:
 
     if isinstance(raw_description, str) and raw_description.strip():
         raw_description = html.unescape(raw_description)
+        title = record.get("title") or ""
+        company = record.get("company") or ""
         result = {
-            "title": record.get("title") or "",
-            "company": record.get("company") or "",
+            "title": title,
+            "company": company,
             "location": record.get("location") or "",
             "date_posted": record.get("posted_date"),
             "valid_through": None,
@@ -244,7 +259,7 @@ def fetch_daily_berlin_job(address: str, job_id: str) -> dict[str, Any]:
             "base_salary": None,
             "description_text": strip_html(raw_description),
             "url": original_url or address,
-            "analysis": analyze(raw_description),
+            "analysis": analyze(raw_description, title=title, employer_name=company),
         }
     elif is_linkedin_url(original_url):
         result = linkedin_detail(original_url)
@@ -261,7 +276,11 @@ def fetch_daily_berlin_job(address: str, job_id: str) -> dict[str, Any]:
             "base_salary": None,
             "description_text": "",
             "url": address,
-            "analysis": analyze(""),
+            "analysis": analyze(
+                "",
+                title=record.get("title") or "",
+                employer_name=record.get("company") or "",
+            ),
         }
 
     result.update({
@@ -284,6 +303,7 @@ def fetch_daily_berlin_job(address: str, job_id: str) -> dict[str, Any]:
     result["date_posted"] = record.get("posted_date") or result.get("date_posted")
     if record.get("employment_type"):
         result["employment_type"] = record["employment_type"]
+    result["base_salary"] = numeric_salary_text(result.get("base_salary"))
     return result
 
 
@@ -307,7 +327,12 @@ def fetch_detail(address: str) -> dict[str, Any]:
     fallback = api_fallback(url)
     if fallback:
         raw_description = fallback.pop("_raw_description", fallback.get("description_text", ""))
-        fallback["analysis"] = analyze(raw_description)
+        fallback["analysis"] = analyze(
+            raw_description,
+            title=fallback.get("title") or "",
+            employer_name=fallback.get("company") or "",
+        )
+        fallback["base_salary"] = numeric_salary_text(fallback.get("base_salary"))
         return fallback
     parser = PageParser()
     parser.feed(page)
@@ -317,7 +342,7 @@ def fetch_detail(address: str) -> dict[str, Any]:
     return {
         "title": title, "company": "", "location": "", "date_posted": None, "valid_through": None,
         "employment_type": None, "base_salary": None, "description_text": description[:20000],
-        "url": url, "analysis": analyze(page),
+        "url": url, "analysis": analyze(page, title=title),
     }
 
 

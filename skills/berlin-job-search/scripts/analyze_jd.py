@@ -39,11 +39,17 @@ REQUIRED_GERMAN = [
         r"\bdeutschkenntnisse\s+(?:sind\s+)?(?:fließend|fliessend)\b",
         r"\b(?:gute|sehr gute|ausgezeichnete|fundierte|verhandlungssichere|fließende|fliessende)\s+kenntnisse\s+(?:in|der)\s+deutsch(?:en)?(?:\s+sprache)?\b",
         r"\bdeutsch\s+(?:fließend|fliessend)\b",
+        r"\b(?:fließend|fliessend)\s+deutsch\b",
         r"\bdeutsch\s+in\s+wort\s+und\s+schrift\b",
         r"\bspeaks?\s+german\s+fluently\b",
         r"\bfluent\s+(?:in\s+)?german\b",
         r"\bfluent\s+in\s+english\s+and\s+german\b",
+        r"\b(?:excellent|strong|very good)\s+(?:written\s+and\s+verbal\s+)?"
+        r"(?:communication\s+)?skills\s+in\s+english\s+and\s+german\b",
+        r"\b(?:fließende|fliessende|gute[nr]?|sehr gute[nr]?|ausgezeichnete[nr]?|fundierte[nr]?|"
+        r"verhandlungssichere[nr]?)\s+deutsch\s*-\s+und\s+(?:gute[nr]?\s+)?englischkenntnisse\b",
         r"\b(?:very\s+good|excellent|strong|proficient)\s+(?:level\s+of\s+)?german\b",
+        r"\bdeutsch\s+und\s+englisch\s+auf\s+c[12]\s+bzw\.?\s+c[12](?:[- ]?niveau)\b",
         r"\bproficiency\s+in\s+german\b",
         r"\bdeutschkenntnisse\s*\(\s*mind(?:estens)?\.?\s*(?:b2|c1|c2)\+?\s*\)",
         r"\bdeutschkenntnisse\s+mind(?:estens)?\.?\s*(?:b2|c1|c2)\+?\b",
@@ -84,6 +90,39 @@ GERMAN_QUALIFIER = re.compile(
     re.I,
 )
 SENTENCE_BREAK = re.compile(r"[.!?;\n]")
+EVIDENCE_BREAK = re.compile(r"[.!?;\n•]")
+LANGUAGE_NOUN = r"(?:german|english|deutsch\w*|englisch\w*)"
+GERMAN_CLAUSE_BREAK = re.compile(
+    r"[,;.!?\n•]|\b(?:und|and)\b(?=\s+" + LANGUAGE_NOUN + r"\b)",
+    re.I,
+)
+TITLE_GERMAN_REQUIRED = [
+    re.compile(pattern, re.I)
+    for pattern in (
+        r"\bgerman[- ]speaker\b",
+        r"\bwith\s+german\b",
+        r"\bgerman[- ]speaking\b",
+        r"\bdeutschsprachig\w*\b",
+    )
+]
+AGENCY_PATTERNS = [
+    re.compile(pattern, re.I)
+    for pattern in (
+        r"\barbeitsvermittlung\w*\b",
+        r"\bpersonalvermittlung\w*\b",
+        r"\bpersonaldienstleist\w*\b",
+        r"\bpersonalberatung\w*\b",
+        r"\bzeitarbeit\b",
+        r"\barbeitnehmer(?:überlassung|ueberlassung)\b",
+        r"\bim\s+auftrag\s+unseres\s+kunden\b",
+        r"\b(?:für|fuer)\s+unseren\s+kunden\b",
+        r"\bunser\s+kunde\b",
+        r"\bunserem\s+kunden\b",
+        r"\bour\s+client\b",
+        r"\bon\s+behalf\s+of\s+our\s+client\b",
+        r"\[\s*arbeitgeber\s*\]",
+    )
+]
 
 MONEY_NUMBER = r"(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
 MONEY_TOKEN = r"(?:€\s*)?" + MONEY_NUMBER + r"\s*k?\s*(?:€|euro|eur)?"
@@ -338,7 +377,29 @@ def language_of(text: str) -> str:
     return "de" if de > en else "en"
 
 
-def german_requirement(text: str, language: str) -> tuple[str, list[str], bool]:
+def _sentence_evidence(text: str, span: tuple[int, int]) -> str:
+    start, end = span
+    previous = list(EVIDENCE_BREAK.finditer(text, 0, start))
+    sentence_start = previous[-1].end() if previous else 0
+    following = EVIDENCE_BREAK.search(text, end)
+    sentence_end = following.start() if following and following.group() == "•" else (
+        following.end() if following else len(text)
+    )
+    evidence = text[sentence_start:sentence_end].strip(" \u2022")
+    if len(evidence) > 240:
+        evidence = text[start:end].strip()
+    return evidence or text[start:end].strip()
+
+
+def german_requirement(
+    text: str,
+    language: str,
+    title: Optional[str] = None,
+) -> tuple[str, list[str], bool]:
+    title_text = str(title or "").strip()
+    if title_text and any(pattern.search(title_text) for pattern in TITLE_GERMAN_REQUIRED):
+        return "required", [title_text], False
+
     required_matches = [
         match.span()
         for pattern in REQUIRED_GERMAN
@@ -357,12 +418,10 @@ def german_requirement(text: str, language: str) -> tuple[str, list[str], bool]:
 
     def is_qualified(span: tuple[int, int]) -> bool:
         end = span[1]
-        window_end = min(len(text), end + 41)
-        sentence_end = next(
-            (match.start() for match in SENTENCE_BREAK.finditer(text, end, window_end)),
-            window_end,
-        )
-        qualifier = GERMAN_QUALIFIER.search(text, end, sentence_end)
+        clause_break = GERMAN_CLAUSE_BREAK.search(text, end)
+        clause_end = clause_break.start() if clause_break else len(text)
+        window_end = min(clause_end, end + 41)
+        qualifier = GERMAN_QUALIFIER.search(text, end, window_end)
         return bool(qualifier and qualifier.start() - end <= 40)
 
     if required_matches:
@@ -383,14 +442,23 @@ def german_requirement(text: str, language: str) -> tuple[str, list[str], bool]:
         result = "unknown"
     if matches:
         snippets = []
-        for start, end in matches:
-            snippet = text[max(0, start - 60):min(len(text), end + 60)].strip()
+        for span in matches:
+            snippet = _sentence_evidence(text, span)
             if snippet not in snippets:
                 snippets.append(snippet)
         return result, snippets, False
     if language == "de":
         return "required", [], True
     return "unknown", [], False
+
+
+def _agency_experience_mention(text: str, start: int) -> bool:
+    prefix = text[max(0, start - 180):start]
+    breaks = [prefix.rfind(char) for char in ".!?;\n•"]
+    prefix = prefix[max(breaks) + 1:]
+    has_experience = re.search(r"\b(?:experience|erfahrung|kenntnisse|skills)\b", prefix, re.I)
+    has_relation = re.search(r"\b(?:in|mit|with)\b", prefix, re.I)
+    return bool(has_experience and has_relation)
 
 
 def parse_amount(value: str) -> Optional[float]:
@@ -602,11 +670,15 @@ def benefits_of(text: str) -> dict[str, Any]:
     return flags
 
 
-def analyze(text: str) -> dict[str, Any]:
+def analyze(
+    text: str,
+    title: Optional[str] = None,
+    employer_name: Optional[str] = None,
+) -> dict[str, Any]:
     integrity = integrity_of(text)
     text = clean_text(text)
     language = language_of(text)
-    german, evidence, inferred = german_requirement(text, language)
+    german, evidence, inferred = german_requirement(text, language, title)
     salary = salary_of(text)
     visa_check = None
     if salary is not None:
@@ -614,14 +686,21 @@ def analyze(text: str) -> dict[str, Any]:
         visa_check = {name: annual >= amount for name, amount in THRESHOLDS_2026.items()}
     lower = text.casefold()
     agency_matches = []
-    for phrase in (
-        "personaldienstleister", "arbeitnehmerüberlassung", "arbeitnehmerueberlassung",
-        "zeitarbeit", "im auftrag unseres kunden", "for our client",
-        "on behalf of our client",
+    for label, value in (
+        ("employer", employer_name),
+        ("title", title),
+        ("text", text),
     ):
-        index = lower.find(phrase)
-        if index >= 0:
-            agency_matches.append(text[max(0, index - 60):min(len(text), index + len(phrase) + 60)].strip())
+        candidate = str(value or "")
+        for pattern in AGENCY_PATTERNS:
+            match = pattern.search(candidate)
+            if match:
+                if label == "text" and _agency_experience_mention(candidate, match.start()):
+                    continue
+                snippet = candidate[max(0, match.start() - 60):min(len(candidate), match.end() + 60)].strip()
+                evidence_item = "{}: {}".format(label, snippet)
+                if evidence_item not in agency_matches:
+                    agency_matches.append(evidence_item)
     return {
         "integrity": integrity,
         "ad_language": language,

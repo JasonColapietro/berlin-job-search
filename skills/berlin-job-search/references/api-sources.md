@@ -40,7 +40,7 @@ The starter catalog comes from active entries in the public `job-client` catalog
 | Workable | `https://apply.workable.com/api/v1/widget/accounts/{slug}` | `jobs[]`, title, locations, public URL, employment type, `telecommuting`, and posting date. |
 | JOIN | `https://join.com/api/public/companies/{numeric-id}/jobs?locale=en-us&page=1&pageSize=25` | The inherited endpoint and parser are retained, but the request returned HTTP 422 for `pageSize` during the 2026-10-23 check. No JOIN company is included as a verified API catalog entry until the current public contract is confirmed. |
 
-ATS locations and descriptions vary by provider. `--where` matches location strings; remote-only/Germany-wide listings are kept only with `--remote`. `--what` requires all query words in the title for ATS results. Description-based language and German requirements are analyzed by `analyze_jd.py`.
+ATS locations and descriptions vary by provider. `--where` matches location strings; remote-only/Germany-wide listings are kept only with `--remote`. `--what` requires all query words in the title for ATS results. The opt-in `--title-match` flag also keeps a result when any normalized query term matches its title; it is useful for broad BA searches and is off by default. Description-based language and German requirements are analyzed by `analyze_jd.py`.
 
 Example company counts on 2026-10-23: Greenhouse Raisin 38, N26 37, Contentful 24, Celonis 218; Lever Pipedrive 8, Qonto 37, Octopus Energy 172; Ashby GALVANY 28; Personio Juna AI 3; SmartRecruiters Flink 96, BVG 26; Recruitee Zeotap 1; Workable dltHub 2. Counts are volatile, not availability guarantees.
 
@@ -59,6 +59,8 @@ The script does not implement unsupported ATS systems or silently use a credenti
 There is no official public LinkedIn job-search API for individual job seekers. The [Job Posting API](https://learn.microsoft.com/en-us/linkedin/talent/job-postings/api/overview?view=li-lts-2026-03) is a partner product for posting/updating ads, not candidate search. This skill never uses internal Voyager endpoints, logged-in cookies or browser storage; private authenticated endpoints can change and risk account restrictions. LinkedIn's [User Agreement](https://www.linkedin.com/legal/user-agreement) and [prohibited software guidance](https://www.linkedin.com/help/linkedin/answer/a1341387) prohibit unauthorized automation/scraping.
 
 The optional guest source makes one low-volume request by default; omit it with `--sources`. It is unofficial and may still violate LinkedIn's terms; the user chooses whether to run it. Use [browser search](browser-search.md) for alerts, saved jobs, Easy Apply and logged-in tasks.
+
+LinkedIn experience/workplace filters are best-effort; verify each result (a Junior TA posting appeared under `mid-senior`).
 
 ```text
 GET https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search
@@ -120,7 +122,7 @@ Dated 2026-10-23 query-parser snapshot: the agent endpoint returned 76,724 Germa
 
 ## Daily Berlin Jobs
 
-[Daily Berlin Jobs](https://daily-berlin-jobs.vercel.app) is Umut Yesildal's public, read-only board for Berlin tech engineering roles (software, data/AI, platform/DevOps/SRE, security, mobile, QA, and embedded engineering). It requires no key. The board refreshes once per day, approximately 06:00–07:30 Europe/Berlin, and removes a posting 30 days after its posting date. API responses are cached and may only change about once daily. Treat `/api/v1/status.updated_at` as the freshness source of truth; do not infer freshness from a list response. LinkedIn-sourced rows have no description in the service; ATS-sourced detail can include one.
+[Daily Berlin Jobs (Berlin tech jobs)](https://daily-berlin-jobs.vercel.app) is Umut Yesildal's public, read-only board for Berlin tech engineering roles (software, data/AI, platform/DevOps/SRE, security, mobile, QA, and embedded engineering). It requires no key and is not a general Berlin jobs source. The board refreshes once per day, approximately 06:00–07:30 Europe/Berlin, and removes a posting 30 days after its posting date. API responses are cached and may only change about once daily. Treat `/api/v1/status.updated_at` as the freshness source of truth; do not infer freshness from a list response. LinkedIn-sourced rows have no description in the service; ATS-sourced detail can include one.
 
 Base URL: `https://daily-berlin-jobs.vercel.app` (override the search source with `GJS_DBJ_URL`).
 

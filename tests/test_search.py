@@ -45,6 +45,8 @@ from search import (
     make_job,
     run_search,
     source_status,
+    title_match_terms,
+    title_matches,
     validate_dbj_filter_values,
 )
 from linkedin import parse_job_cards
@@ -479,6 +481,101 @@ class SourceParsingTests(unittest.TestCase):
                 [candidate_one, candidate_two], limited_file, only_new=True, limit=1,
             )
             self.assertEqual([job["company"] for job in only_unseen], ["Two"])
+
+
+class TitleMatchTests(unittest.TestCase):
+    def test_talent_acquisition_matches_any_query_term(self):
+        titles = [
+            "Talent Acquisition Manager",
+            "Head of Talent & Org Development",
+            "Working Student - Talent Acquisition",
+            "Senior Software Engineer",
+            "Staplerfahrer",
+        ]
+        kept = [title for title in titles if title_matches("Talent Acquisition", title)]
+        self.assertEqual(kept, titles[:3])
+
+    def test_recruiting_prefix_matches_recruiter_but_not_generic_manager(self):
+        self.assertTrue(title_matches("Recruiting Manager", "Recruiter (m/w/d)"))
+        self.assertFalse(title_matches("Recruiting Manager", "Senior Product Manager"))
+
+    def test_long_title_terms_use_bounded_word_prefixes(self):
+        self.assertTrue(title_matches("Pflegefachkraft", "Pflegefachkraft (m/w/d)"))
+        self.assertTrue(title_matches("Große Straße", "Grosse Strasse"))
+        self.assertTrue(title_matches("Fußpflege", "Fusspfleger"))
+        self.assertTrue(title_matches("Recruiting", "Recruiter"))
+        self.assertTrue(title_matches("Recruiting", "Recruitment Consultant"))
+        self.assertTrue(title_matches("Acquisition", "Talent Acquisition"))
+        self.assertTrue(title_matches("Personalreferent", "Personalreferent (m/w/d)"))
+        self.assertFalse(
+            title_matches(
+                "Personalreferent Recruiting",
+                "Senior Sales Manager / Key Account Manager in der Personalberatung",
+            )
+        )
+
+    def test_all_generic_query_falls_back_to_the_full_phrase(self):
+        terms, fallback = title_match_terms("Senior Manager")
+        self.assertEqual(terms, ["senior manager"])
+        self.assertTrue(fallback)
+        self.assertTrue(title_matches("Senior Manager", "Senior Manager (Berlin)"))
+        self.assertFalse(title_matches("Senior Manager", "Manager of Senior Products"))
+
+    def test_title_match_is_opt_in_and_reports_dropped_jobs(self):
+        jobs = [
+            make_job("ba", "Talent Acquisition Manager", "Example A", "Berlin", "https://example.test/ta"),
+            make_job("ba", "Senior Software Engineer", "Example B", "Berlin", "https://example.test/software"),
+        ]
+
+        def fetcher(_args):
+            return jobs, []
+
+        with patch.dict(SOURCE_FETCHERS, {"ba": fetcher}):
+            unchanged = run_search({"what": "Talent Acquisition", "where": "Berlin", "days": 0, "sources": "ba"})
+            filtered = run_search({
+                "what": "Talent Acquisition", "where": "Berlin", "days": 0,
+                "sources": "ba", "title_match": True,
+            })
+
+        self.assertEqual([job["title"] for job in unchanged["jobs"]], ["Talent Acquisition Manager", "Senior Software Engineer"])
+        self.assertNotIn("title_filtered", unchanged["meta"])
+        self.assertEqual([job["title"] for job in filtered["jobs"]], ["Talent Acquisition Manager"])
+        self.assertEqual(filtered["meta"]["title_filtered"], 1)
+
+    def test_title_match_replaces_all_word_gate_for_ats(self):
+        jobs = [
+            make_job("ats", "Recruiter (m/w/d)", "Example A", "Berlin", "https://example.test/recruiter"),
+            make_job("ats", "Senior Product Manager", "Example B", "Berlin", "https://example.test/product"),
+        ]
+        with patch.dict(SOURCE_FETCHERS, {"ats": lambda _args: (jobs, [])}):
+            result = run_search({
+                "what": "Recruiting Manager", "where": "Berlin", "days": 0,
+                "sources": "ats", "title_match": True,
+            })
+
+        self.assertEqual([job["title"] for job in result["jobs"]], ["Recruiter (m/w/d)"])
+        self.assertEqual(result["meta"]["title_filtered"], 1)
+
+    def test_cli_title_match_prints_one_filter_summary_line(self):
+        jobs = [
+            make_job("ba", "Talent Acquisition Manager", "Example A", "Berlin", "https://example.test/ta"),
+            make_job("ba", "Senior Software Engineer", "Example B", "Berlin", "https://example.test/swe"),
+        ]
+        stdout, stderr = io.StringIO(), io.StringIO()
+        argv = [
+            "search.py", "--what", "Talent Acquisition", "--where", "Berlin",
+            "--days", "0", "--sources", "ba", "--title-match", "--format", "json",
+        ]
+        with patch.dict(SOURCE_FETCHERS, {"ba": lambda _args: (jobs, [])}), \
+                patch.object(sys, "argv", argv), \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            self.assertEqual(search.main(), 0)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual([job["title"] for job in payload["jobs"]], ["Talent Acquisition Manager"])
+        self.assertEqual(payload["meta"]["title_filtered"], 1)
+        filter_lines = [line for line in stderr.getvalue().splitlines() if line.startswith("title-match:")]
+        self.assertEqual(filter_lines, ["title-match: dropped 1 job"])
 
 
 if __name__ == "__main__":

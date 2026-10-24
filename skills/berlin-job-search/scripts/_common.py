@@ -99,7 +99,9 @@ def salary_text(value: Any) -> Optional[str]:
         else:
             value = value.get("label") or value.get("summary") or ""
     text = plain(value)
-    return None if text.casefold() in {"", "keine_angaben", "keine angaben", "not disclosed", "n/a", "none"} else text
+    if text.casefold() in {"", "keine_angaben", "keine angaben", "not disclosed", "n/a", "none"}:
+        return None
+    return text if re.search(r"\d", text) else None
 
 
 def source_date(value: Any) -> Optional[str]:
