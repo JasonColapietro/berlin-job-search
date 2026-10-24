@@ -4,6 +4,7 @@ AI job-search coach for Berlin and the rest of Germany.
 
 [![CI](https://github.com/umutyesildal/berlin-job-search/actions/workflows/ci.yml/badge.svg)](https://github.com/umutyesildal/berlin-job-search/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![skills.sh](https://skills.sh/b/umutyesildal/berlin-job-search)](https://skills.sh/umutyesildal/berlin-job-search)
 
 ![Fictional CV and application dashboard](docs/images/hero.png)
 
@@ -37,6 +38,8 @@ npx skills add umutyesildal/berlin-job-search
 codex plugin marketplace add umutyesildal/berlin-job-search
 codex plugin add berlin-job-search@berlin-job-search
 ```
+
+**Claude Desktop and claude.ai:** add the plugin from **Customize → Plugins** once it is listed. Claude's chat sandbox blocks most outbound requests, so live search there uses the bundled Daily Berlin Jobs connector and Claude's web search; the full multi-source search runs in Claude Code or Codex.
 
 **Use this repo as a workspace:** clone it, start an agent and say “set up my job search.” Personal data belongs in the gitignored `job-search/` directory.
 
@@ -86,6 +89,21 @@ Other agents can install the skill and use it directly in chat.
 | LinkedIn guest | Local CLI, low volume | Unofficial, subject to LinkedIn's User Agreement, and sometimes blocked. |
 | freehire.me | Optional technology source | Public API; opt in explicitly. |
 | StepStone, Indeed, XING, hiring.cafe | Germany-wide | Browser recipes; confirm current filters and access. |
+
+## What it connects to
+
+| Destination | When |
+|---|---|
+| `rest.arbeitsagentur.de`, `www.arbeitsagentur.de` | BA search and job details |
+| `daily-berlin-jobs.vercel.app` | Daily Berlin Jobs API and the bundled read-only MCP connector |
+| `www.arbeitnow.com` | Arbeitnow search |
+| `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`, `*.jobs.personio.de`, `api.smartrecruiters.com`, `*.recruitee.com`, `apply.workable.com`, `join.com` | Company boards listed in `assets/companies.json` |
+| `www.linkedin.com` | Logged-out guest job search (local CLI, low volume) |
+| `freehire.me` | Only with `--sources freehire` |
+| Any job URL you pass to `job_detail.py` | Fetches that public page |
+| Local Chrome/Chromium/Edge, `pypdf`/`pdftotext` | PDF rendering and text extraction, if installed |
+
+Only search terms, city, filters and job URLs are sent. Your CV, profile and tracker stay on your machine; nothing is sent to the author.
 
 ## Privacy and safety
 

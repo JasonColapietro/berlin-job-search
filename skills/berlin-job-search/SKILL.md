@@ -5,7 +5,7 @@ license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:
   author: umutyesildal
-  version: "0.1.0"
+  version: "0.1.1"
   data-as-of: "2026-10"
 ---
 
@@ -106,6 +106,22 @@ These facts change everything:
 
 For a daily check, rerun saved queries with `--only-new --days 2`. Daily Berlin Jobs updates once
 a day, around 06:00–07:30 Berlin time.
+
+**When scripts can't reach the network** (Claude Desktop and claude.ai sandboxes allow only package
+registries by default; errors look like connection refused, proxy 403 or DNS failures), keep
+helping with the tools you do have:
+- **Daily Berlin Jobs connector** (bundled with the plugin): use `search_jobs`, `get_job`,
+  `get_status` and `list_companies` for Berlin tech roles.
+- **Web fetch** for public GET endpoints:
+  - `https://daily-berlin-jobs.vercel.app/api/v1/jobs?q=<term>&format=md` (also accepts `role`,
+    `level`, `work_mode`, `since`)
+  - `https://www.arbeitnow.com/api/job-board-api`
+- **Web search** for BA, StepStone, Indeed and LinkedIn postings. The BA API needs a request header
+  that web fetch can't send, so search its website instead.
+
+Say once that live coverage is reduced in this environment, and that the full search runs in Claude
+Code or Codex. For pasted job ads, `analyze_jd.py`, `render_doc.py`, `ats_check.py` and
+`tracker.py` work offline.
 
 ## Evaluate
 

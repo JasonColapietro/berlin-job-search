@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "daily-berlin-jobs": {
+      "type": "http",
+      "url": "https://daily-berlin-jobs.vercel.app/api/mcp"
+    }
+  }
+}

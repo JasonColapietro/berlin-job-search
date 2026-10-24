@@ -17,6 +17,7 @@ MANIFESTS = (
     ROOT / ".claude-plugin" / "marketplace.json",
     ROOT / ".codex-plugin" / "plugin.json",
     ROOT / ".agents" / "plugins" / "marketplace.json",
+    ROOT / ".mcp.json",
 )
 VERSIONED = set(MANIFESTS[:3])
 LOCAL_MARKERS = (bytes((47, 116, 109, 112, 47)), bytes((47, 85, 115, 101, 114, 115, 47)))
@@ -81,6 +82,18 @@ def validate_manifests(version: str) -> list[str]:
         for plugin in manifest.get("plugins", []):
             if "version" in plugin and plugin["version"] != version:
                 errors.append("{}: plugin version must match SKILL.md".format(path.relative_to(ROOT)))
+        if path.name == ".mcp.json":
+            servers = manifest.get("mcpServers")
+            if not isinstance(servers, dict) or not servers:
+                errors.append(".mcp.json: mcpServers must be a non-empty object")
+            else:
+                for name, server in servers.items():
+                    try:
+                        url = urlsplit(str(server.get("url", ""))) if isinstance(server, dict) else None
+                    except ValueError:
+                        url = None
+                    if not isinstance(server, dict) or server.get("type") not in {"http", "sse", "ws"} or not url or url.scheme != "https" or not url.netloc:
+                        errors.append(".mcp.json: {} must use http, sse, or ws and an absolute https URL".format(name))
     return errors
 
 def validate_symlinks() -> list[str]:

@@ -1,8 +1,8 @@
 {
   "name": "berlin-job-search",
   "displayName": "Berlin Job Search",
-  "version": "0.1.0",
-  "description": "Berlin Job Search: find work in Berlin and the rest of Germany with local-first tools and Germany-specific guidance.",
+  "version": "0.1.1",
+  "description": "Job-search coach for Berlin and the rest of Germany: search live postings, check German-language and Blue Card salary requirements, write a German Lebenslauf or English CV, practise interviews and track applications.",
   "author": {
     "name": "Umut Yesildal",
     "url": "https://github.com/umutyesildal"
@@ -11,13 +11,17 @@
   "repository": "https://github.com/umutyesildal/berlin-job-search",
   "license": "MIT",
   "keywords": [
-    "Germany",
+    "germany",
+    "berlin",
     "job-search",
     "career",
-    "Berlin",
-    "application"
+    "lebenslauf",
+    "blue-card"
   ],
   "skills": [
     "./skills/berlin-job-search"
+  ],
+  "commands": [
+    "./.claude/commands/"
   ]
 }
