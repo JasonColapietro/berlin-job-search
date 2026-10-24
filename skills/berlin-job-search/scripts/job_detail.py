@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 from typing import Any, Optional
 
 from _common import USER_AGENT, json_text, request_bytes, request_json, salary_text, strip_html, write_output
-from analyze_jd import analyze
+from analyze_jd import analyze, employment_type_from_title
 
 
 class PageParser(HTMLParser):
@@ -81,6 +81,10 @@ def value_text(value: Any) -> str:
     return str(value or "")
 
 
+def title_first_employment_type(title: Any, current: Any = None) -> Optional[str]:
+    return employment_type_from_title(str(title or "")) or value_text(current) or None
+
+
 def numeric_salary_text(value: Any) -> Optional[str]:
     text = str(value or "").strip()
     return text if re.search(r"\d", text) else None
@@ -119,7 +123,7 @@ def jsonld_detail(data: dict[str, Any], url: str) -> dict[str, Any]:
         "location": " / ".join(filter(None, place_names)),
         "date_posted": value_text(data.get("datePosted")) or None,
         "valid_through": value_text(data.get("validThrough")) or None,
-        "employment_type": value_text(data.get("employmentType")) or None,
+        "employment_type": title_first_employment_type(title, data.get("employmentType")),
         "base_salary": salary_text,
         "description_text": description,
         "url": url,
@@ -229,7 +233,7 @@ def linkedin_detail(address: str) -> dict[str, Any]:
         "location": detail.get("location") or "",
         "date_posted": detail.get("date"),
         "valid_through": None,
-        "employment_type": detail.get("employment_type"),
+        "employment_type": title_first_employment_type(title, detail.get("employment_type")),
         "base_salary": numeric_salary_text((analysis.get("salary") or {}).get("raw")),
         "description_text": detail.get("description") or "",
         "url": detail.get("url") or address,
@@ -301,8 +305,10 @@ def fetch_daily_berlin_job(address: str, job_id: str) -> dict[str, Any]:
     result["company"] = record.get("company") or result.get("company") or ""
     result["location"] = record.get("location") or result.get("location") or ""
     result["date_posted"] = record.get("posted_date") or result.get("date_posted")
-    if record.get("employment_type"):
-        result["employment_type"] = record["employment_type"]
+    result["employment_type"] = title_first_employment_type(
+        result.get("title") or record.get("title"),
+        record.get("employment_type") or result.get("employment_type"),
+    )
     result["base_salary"] = numeric_salary_text(result.get("base_salary"))
     return result
 
@@ -327,6 +333,9 @@ def fetch_detail(address: str) -> dict[str, Any]:
     fallback = api_fallback(url)
     if fallback:
         raw_description = fallback.pop("_raw_description", fallback.get("description_text", ""))
+        fallback["employment_type"] = title_first_employment_type(
+            fallback.get("title"), fallback.get("employment_type"),
+        )
         fallback["analysis"] = analyze(
             raw_description,
             title=fallback.get("title") or "",
@@ -341,7 +350,7 @@ def fetch_detail(address: str) -> dict[str, Any]:
     title = strip_html(title_match.group(1)) if title_match else ""
     return {
         "title": title, "company": "", "location": "", "date_posted": None, "valid_through": None,
-        "employment_type": None, "base_salary": None, "description_text": description[:20000],
+        "employment_type": title_first_employment_type(title), "base_salary": None, "description_text": description[:20000],
         "url": url, "analysis": analyze(page, title=title),
     }
 

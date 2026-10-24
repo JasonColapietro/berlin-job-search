@@ -43,6 +43,21 @@ class LinkedInParsingTests(unittest.TestCase):
         self.assertIn("german_required", detail["analysis"])
         self.assertTrue(detail["is_active"])
 
+    def test_student_title_overrides_linkedins_full_time_criteria(self):
+        markup = """\
+<h2 class="topcard__title">Working Student Product Management</h2>
+<h3 class="description__job-criteria-subheader">Seniority level</h3>
+<span class="description__job-criteria-text">Internship</span>
+<h3 class="description__job-criteria-subheader">Employment type</h3>
+<span class="description__job-criteria-text">Full-time</span>
+<div class="show-more-less-html__markup">Internship experience may be useful.</div>
+"""
+        detail = parse_job_detail(markup, "1234567890")
+        self.assertEqual(detail["employment_type"], "werkstudent")
+        self.assertEqual(detail["seniority"], "student")
+        self.assertEqual(detail["analysis"]["employment_type"], ["werkstudent"])
+        self.assertEqual(detail["analysis"]["seniority"], "student")
+
     def test_job_id_normalization_accepts_id_urn_and_linkedin_url(self):
         self.assertEqual(normalize_job_id("4385092199"), "4385092199")
         self.assertEqual(normalize_job_id("urn:li:jobPosting:4385092199"), "4385092199")
@@ -67,6 +82,35 @@ class LinkedInParsingTests(unittest.TestCase):
         self.assertEqual(params["f_JT"], ["F,C"])
         self.assertEqual(params["f_AL"], ["true"])
         self.assertEqual(params["start"], ["10"])
+
+    def test_city_aliases_produce_identical_linkedin_parameters(self):
+        urls = [
+            build_search_url(
+                city, "Product Manager", 14, None, None, None, None, False, None, 1,
+            )
+            for city in ("Munich", "München", "Muenchen")
+        ]
+        params = [parse_qs(urlsplit(url).query) for url in urls]
+        self.assertEqual(params[0], params[1])
+        self.assertEqual(params[1], params[2])
+        self.assertEqual(params[0]["location"], ["Munich, Germany"])
+        self.assertEqual(params[0]["geoId"], ["100495942"])
+
+    def test_unverified_city_has_no_invented_linkedin_geo_id(self):
+        url = build_search_url(
+            "Nuremberg", "Product Manager", 14, None, None, None, None, False, None, 1,
+        )
+        params = parse_qs(urlsplit(url).query)
+        self.assertEqual(params["location"], ["Nuremberg, Germany"])
+        self.assertNotIn("geoId", params)
+
+    def test_unknown_city_location_passes_through_to_linkedin(self):
+        url = build_search_url(
+            "Cottbus", "Product Manager", 14, None, None, None, None, False, None, 1,
+        )
+        params = parse_qs(urlsplit(url).query)
+        self.assertEqual(params["location"], ["Cottbus"])
+        self.assertNotIn("geoId", params)
 
     def test_search_retains_first_page_when_later_page_fails(self):
         with patch(

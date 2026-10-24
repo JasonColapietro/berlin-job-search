@@ -19,6 +19,8 @@ class AnalyzeJobAdTests(unittest.TestCase):
             "German (C1) is required for this role.",
             "German is a must for customer communication.",
             "Native German is required.",
+            "Dein Profil: Sehr gutes Deutsch in Wort und Schrift (mind. C1).",
+            "Sehr gutes Deutsch und Englisch.",
         ]
         for text in cases:
             with self.subTest(text=text):
@@ -142,6 +144,31 @@ class AnalyzeJobAdTests(unittest.TestCase):
         self.assertEqual(analyze("Internship in Berlin")["seniority"], "intern")
         self.assertEqual(analyze("Teamlead for data engineering")["seniority"], "lead")
         self.assertEqual(analyze("Engineering Manager")["seniority"], "manager")
+
+    def test_title_first_student_employment_type_and_seniority(self):
+        cases = (
+            ("Working Student Product Management", "werkstudent", "student"),
+            ("Werkstudentin Product Management", "werkstudent", "student"),
+            ("Intern Product Management", "praktikum", "intern"),
+            ("Praktikum Product Management", "praktikum", "intern"),
+            ("Trainee Product Management", "trainee", "unknown"),
+            ("Ausbildung Product Management", "ausbildung", "unknown"),
+        )
+        for title, expected_type, expected_seniority in cases:
+            with self.subTest(title=title):
+                result = analyze(
+                    "The role offers flexible hours.",
+                    title=title,
+                )
+                self.assertEqual(result["employment_type"], [expected_type])
+                self.assertEqual(result["seniority"], expected_seniority)
+
+    def test_title_seniority_overrides_description_internship_mentions(self):
+        result = analyze(
+            "Full-time role. Internship experience may count toward the requirement.",
+            title="Junior Product Manager",
+        )
+        self.assertEqual(result["seniority"], "junior")
 
     def test_vacation_days_and_benefits(self):
         result = analyze("We offer 30 days vacation, Weihnachtsgeld, Urlaubsgeld, bAV, VWL, Tarifvertrag, Jobrad, Deutschlandticket and VSOP equity.")
@@ -333,6 +360,11 @@ class AnalyzeJobAdTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIsNone(salary_of(text))
 
+    def test_salary_does_not_parse_digits_inside_company_names(self):
+        result = analyze("CHECK24 bietet eine attraktive Vergütung.")
+        self.assertIsNone(result["salary"])
+        self.assertIsNone(salary_of("Example24 offers attractive compensation."))
+
     def test_german_salary_von_bis_range(self):
         result = salary_of("Das Gehalt liegt von 55.000 bis 65.000 Euro brutto.")
         self.assertIsNotNone(result)
@@ -352,6 +384,15 @@ class AnalyzeJobAdTests(unittest.TestCase):
             "Proficiency in German is needed.",
             "Excellent written and verbal communication skills in English and German.",
             "Fluent in German and English.",
+            "Fluency in German and English.",
+            "Fluency in English and German.",
+            "We require fluent German and English.",
+            "Fließend in Deutsch.",
+            "Fliessend in Deutsch.",
+            "Fließend in Deutsch und Englisch (mindestens C1-Niveau).",
+            "Sehr gute Deutsch-Kenntnisse.",
+            "Gute Deutsch-Kenntnisse.",
+            "Deutsch-Kenntnisse (C1).",
             "Deutsch und Englisch auf C2 bzw. C1-Niveau.",
             "Sehr gute Deutschkenntnisse, gute Englischkenntnisse von Vorteil.",
             "Verhandlungssichere Deutsch- und Englischkenntnisse.",
@@ -371,6 +412,12 @@ class AnalyzeJobAdTests(unittest.TestCase):
         unrelated = analyze("We are a German company serving the German market.")
         self.assertEqual(unrelated["german_required"], "unknown")
         self.assertFalse(unrelated["inferred"])
+        bare_english = analyze("The posting mentions Deutsch-Kenntnisse.")
+        self.assertEqual(bare_english["german_required"], "unknown")
+        self.assertFalse(bare_english["inferred"])
+        bare_german = analyze("Die Ausschreibung ist auf Deutsch. Deutsch-Kenntnisse.")
+        self.assertEqual(bare_german["german_required"], "required")
+        self.assertTrue(bare_german["inferred"])
 
     def test_german_title_signals_are_explicit_requirements(self):
         for title in (
@@ -384,6 +431,16 @@ class AnalyzeJobAdTests(unittest.TestCase):
                 self.assertEqual(result["german_required"], "required")
                 self.assertFalse(result["inferred"])
                 self.assertEqual(result["german_evidence"], [title])
+
+    def test_bonus_heading_does_not_qualify_required_language_clause(self):
+        text = (
+            "Fließend in Deutsch und Englisch (mindestens C1-Niveau) "
+            "Bonus: Erfahrung mit MCP/APIs."
+        )
+        result = analyze(text)
+        self.assertEqual(result["german_required"], "required")
+        self.assertFalse(result["inferred"])
+        self.assertIn(text, result["german_evidence"])
 
     def test_german_evidence_stays_with_its_bullet_and_language_clause(self):
         result = analyze(

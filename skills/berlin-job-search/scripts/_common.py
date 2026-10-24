@@ -16,6 +16,155 @@ from typing import Any, Optional
 
 USER_AGENT = "berlin-job-search-skill/0.1 (+https://github.com/umutyesildal/berlin-job-search)"
 
+CITY_ALIASES = {
+    "munich": {
+        "key": "munich",
+        "canonical": "Munich",
+        "ba": "München",
+        "linkedin": "Munich, Germany",
+        "geo_id": "100495942",
+        "variants": ("München", "Munich", "Muenchen"),
+    },
+    "cologne": {
+        "key": "cologne",
+        "canonical": "Cologne",
+        "ba": "Köln",
+        "linkedin": "Cologne, Germany",
+        "geo_id": "90009713",
+        "variants": ("Köln", "Cologne", "Koeln", "Cologne/Bonn"),
+    },
+    "nuremberg": {
+        "key": "nuremberg",
+        "canonical": "Nuremberg",
+        "ba": "Nürnberg",
+        "linkedin": "Nuremberg, Germany",
+        "geo_id": None,
+        "variants": ("Nürnberg", "Nuremberg", "Nuernberg"),
+    },
+    "frankfurt": {
+        "key": "frankfurt",
+        "canonical": "Frankfurt",
+        "ba": "Frankfurt am Main",
+        "linkedin": "Frankfurt am Main, Germany",
+        "geo_id": "90009714",
+        "variants": ("Frankfurt", "Frankfurt am Main", "Frankfurt/Rhine-Main"),
+    },
+    "dusseldorf": {
+        "key": "dusseldorf",
+        "canonical": "Düsseldorf",
+        "ba": "Düsseldorf",
+        "linkedin": "Düsseldorf, Germany",
+        "geo_id": None,
+        "variants": ("Düsseldorf", "Duesseldorf"),
+    },
+    "hamburg": {
+        "key": "hamburg",
+        "canonical": "Hamburg",
+        "ba": "Hamburg",
+        "linkedin": "Hamburg, Germany",
+        "geo_id": "101949806",
+        "variants": ("Hamburg",),
+    },
+    "berlin": {
+        "key": "berlin",
+        "canonical": "Berlin",
+        "ba": "Berlin",
+        "linkedin": "Berlin, Germany",
+        "geo_id": "103035651",
+        "variants": ("Berlin",),
+    },
+    "stuttgart": {
+        "key": "stuttgart",
+        "canonical": "Stuttgart",
+        "ba": "Stuttgart",
+        "linkedin": "Stuttgart, Germany",
+        "geo_id": None,
+        "variants": ("Stuttgart",),
+    },
+    "leipzig": {
+        "key": "leipzig",
+        "canonical": "Leipzig",
+        "ba": "Leipzig",
+        "linkedin": "Leipzig, Germany",
+        "geo_id": None,
+        "variants": ("Leipzig",),
+    },
+    "dresden": {
+        "key": "dresden",
+        "canonical": "Dresden",
+        "ba": "Dresden",
+        "linkedin": "Dresden, Germany",
+        "geo_id": None,
+        "variants": ("Dresden",),
+    },
+    "hannover": {
+        "key": "hannover",
+        "canonical": "Hanover",
+        "ba": "Hannover",
+        "linkedin": "Hanover, Germany",
+        "geo_id": None,
+        "variants": ("Hannover", "Hanover"),
+    },
+    "germany": {
+        "key": "germany",
+        "canonical": "Germany",
+        "ba": "Deutschland",
+        "linkedin": "Germany",
+        "geo_id": "101282230",
+        "variants": ("Germany", "Deutschland"),
+    },
+}
+
+
+def _normalized_city_text(value: Any) -> str:
+    folded = unicodedata.normalize("NFKD", str(value or "").casefold())
+    unaccented = "".join(char for char in folded if not unicodedata.combining(char))
+    return " ".join(re.findall(r"[a-z0-9]+", unaccented))
+
+
+def city_alias(value: Any) -> Optional[dict[str, Any]]:
+    normalized = _normalized_city_text(value)
+    if not normalized:
+        return None
+    for alias in CITY_ALIASES.values():
+        for variant in alias["variants"]:
+            candidate = _normalized_city_text(variant)
+            if normalized == candidate or normalized.startswith(candidate + " "):
+                return alias
+    return None
+
+
+def ba_location_name(value: Any) -> str:
+    alias = city_alias(value)
+    return str(alias["ba"]) if alias else str(value or "")
+
+
+def canonical_location_name(value: Any) -> str:
+    alias = city_alias(value)
+    if alias:
+        return str(alias["canonical"])
+    return str(value or "")
+
+
+def linkedin_location_and_geo_id(value: Any) -> tuple[str, Optional[str]]:
+    alias = city_alias(value)
+    if alias:
+        return str(alias["linkedin"]), alias.get("geo_id")
+    return str(value or ""), None
+
+
+def city_location_matches(query: Any, location: Any) -> bool:
+    if not query:
+        return True
+    alias = city_alias(query)
+    variants = alias["variants"] if alias else (str(query),)
+    normalized_location = " " + _normalized_city_text(location) + " "
+    return any(
+        " " + _normalized_city_text(variant) + " " in normalized_location
+        for variant in variants
+        if _normalized_city_text(variant)
+    )
+
 
 class TextExtractor(HTMLParser):
     def __init__(self) -> None:

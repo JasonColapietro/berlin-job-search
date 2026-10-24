@@ -40,12 +40,18 @@ REQUIRED_GERMAN = [
         r"\b(?:gute|sehr gute|ausgezeichnete|fundierte|verhandlungssichere|fließende|fliessende)\s+kenntnisse\s+(?:in|der)\s+deutsch(?:en)?(?:\s+sprache)?\b",
         r"\bdeutsch\s+(?:fließend|fliessend)\b",
         r"\b(?:fließend|fliessend)\s+deutsch\b",
+        r"\b(?:fließend|fliessend)\s+in\s+deutsch(?:\s+und\s+englisch)?(?:\s*\([^)]*\))?",
         r"\bdeutsch\s+in\s+wort\s+und\s+schrift\b",
+        r"\b(?:sehr\s+)?gute[sn]?\s+deutsch\b(?![-\w])",
         r"\bspeaks?\s+german\s+fluently\b",
         r"\bfluent\s+(?:in\s+)?german\b",
         r"\bfluent\s+in\s+english\s+and\s+german\b",
+        r"\bfluency\s+in\s+(?:(?:english)\s+and\s+)?german(?:\s+and\s+english)?\b",
+        r"\bfluent\s+german\s+and\s+english\b",
         r"\b(?:excellent|strong|very good)\s+(?:written\s+and\s+verbal\s+)?"
         r"(?:communication\s+)?skills\s+in\s+english\s+and\s+german\b",
+        r"\b(?:sehr\s+)?gute[nr]?\s+deutsch[- ]kenntnisse\b",
+        r"\bdeutsch[- ]kenntnisse\s*\(\s*(?:mind(?:estens)?\.?\s*)?(?:b1|b2|c1|c2)\+?\s*\)",
         r"\b(?:fließende|fliessende|gute[nr]?|sehr gute[nr]?|ausgezeichnete[nr]?|fundierte[nr]?|"
         r"verhandlungssichere[nr]?)\s+deutsch\s*-\s+und\s+(?:gute[nr]?\s+)?englischkenntnisse\b",
         r"\b(?:very\s+good|excellent|strong|proficient)\s+(?:level\s+of\s+)?german\b",
@@ -86,7 +92,7 @@ NOT_REQUIRED_GERMAN = [
 
 GERMAN_QUALIFIER = re.compile(
     r"\b(?:a\s+plus|plus|bonus|advantage|advantageous|nice\s+to\s+have|preferred|"
-    r"desirable|von\s+vorteil|wünschenswert|wuenschenswert|ein\s+plus)\b",
+    r"desirable|von\s+vorteil|wünschenswert|wuenschenswert|ein\s+plus)\b(?!\s*:)",
     re.I,
 )
 SENTENCE_BREAK = re.compile(r"[.!?;\n]")
@@ -124,8 +130,8 @@ AGENCY_PATTERNS = [
     )
 ]
 
-MONEY_NUMBER = r"(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
-MONEY_TOKEN = r"(?:€\s*)?" + MONEY_NUMBER + r"\s*k?\s*(?:€|euro|eur)?"
+MONEY_NUMBER = r"(?<![A-Za-z])(?<!\d)(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
+MONEY_TOKEN = r"(?:€\s*)?" + MONEY_NUMBER + r"\s*k?(?![A-Za-z])\s*(?:€|euro|eur)?"
 RANGE_PATTERNS = (
     re.compile(r"\bzwischen\s+(?P<left>" + MONEY_TOKEN + r")\s+und\s+(?P<right>" + MONEY_TOKEN + r")", re.I),
     re.compile(r"\bfrom\s+(?P<left>" + MONEY_TOKEN + r")\s+to\s+(?P<right>" + MONEY_TOKEN + r")", re.I),
@@ -618,7 +624,23 @@ def remote_mode(text: str) -> str:
     return "unknown"
 
 
-def employment_types(text: str) -> list[str]:
+def employment_type_from_title(title: Optional[str]) -> Optional[str]:
+    lower = str(title or "").casefold()
+    for employment_type, pattern in (
+        ("werkstudent", r"\b(?:werkstudent(?:in)?|working[- ]student)\b"),
+        ("praktikum", r"\b(?:intern(?:ship)?|praktik(?:um|ant|antin))\b"),
+        ("trainee", r"\btrainee\b"),
+        ("ausbildung", r"\b(?:ausbildung|apprenticeship|apprentice)\b"),
+    ):
+        if re.search(pattern, lower):
+            return employment_type
+    return None
+
+
+def employment_types(text: str, title: Optional[str] = None) -> list[str]:
+    title_employment = employment_type_from_title(title)
+    if title_employment:
+        return [title_employment]
     lower = text.casefold()
     patterns = (
         ("festanstellung/unbefristet", r"\b(?:festanstellung|unbefristet)\b"),
@@ -635,7 +657,24 @@ def employment_types(text: str) -> list[str]:
     return [name for name, pattern in patterns if re.search(pattern, lower)]
 
 
-def seniority(text: str) -> str:
+def seniority_from_title(title: Optional[str]) -> Optional[str]:
+    lower = str(title or "").casefold()
+    for label, pattern in (
+        ("senior", r"\b(?:senior|sr|staff|principal)\b"),
+        ("lead", r"\blead\b"),
+        ("junior", r"\b(?:junior|jr|entry[- ]level)\b"),
+        ("intern", r"\b(?:intern(?:ship)?|praktik(?:um|ant|antin))\b"),
+        ("student", r"\b(?:werkstudent(?:in)?|working[- ]student|student)\b"),
+    ):
+        if re.search(pattern, lower):
+            return label
+    return None
+
+
+def seniority(text: str, title: Optional[str] = None) -> str:
+    title_level = seniority_from_title(title)
+    if title_level:
+        return title_level
     lower = text.casefold()
     for label, pattern in (
         ("intern", r"\bintern(?:ship)?\b|\bpraktikum\b"),
@@ -720,8 +759,8 @@ def analyze(
         "salary": salary,
         "visa_salary_check": visa_check,
         "remote_mode": remote_mode(text),
-        "employment_type": employment_types(text),
-        "seniority": seniority(text),
+        "employment_type": employment_types(text, title),
+        "seniority": seniority(text, title),
         "agency_or_temp": bool(agency_matches),
         "agency_evidence": agency_matches,
         "benefits_signals": benefits_of(text),

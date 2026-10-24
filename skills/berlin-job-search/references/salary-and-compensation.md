@@ -24,6 +24,17 @@
 | Skilled trades | Elektroniker/in Berlin €38,300/year (€32,000–€45,500). | [StepStone](https://www.stepstone.de/gehalt/Elektroniker-in/city/Berlin.html), accessed 2026-10-24; snapshot date/sample not stated (**verify**). |
 | Hospitality / retail | Hotelfachmann/frau Berlin €29,800 (€26,700–€33,000); Verkäufer/in Einzelhandel Berlin €31,300 (€26,600–€36,700). | [StepStone hotel](https://www.stepstone.de/gehalt/Hotelfachmann-frau/city/Berlin.html) and [retail](https://www.stepstone.de/gehalt/Verkaeufer-in-Einzelhandel/city/Berlin.html), accessed 2026-10-24; snapshot dates/samples not stated (**verify**). |
 
+## Munich and Berlin: students and junior product managers
+
+| Role / city | StepStone 2026 page figure | Source and limits |
+|---|---|---|
+| Werkstudent/in — Munich | €35,600 gross/year displayed average (range €29,200–€44,100); page also displays about €12/hour. | [StepStone Munich](https://www.stepstone.de/gehalt/Werkstudent-in/city/Muenchen.html), accessed 2026-10-24 (**verify**). Generic across Werkstudent roles, not PM-specific. The €12/hour display is below the 2026 statutory minimum (€13.90/hour) for covered employment; do not use it as a pay floor or offer estimate. |
+| Werkstudent/in — Berlin | €36,600 gross/year displayed average (range €29,900–€45,000); page also displays about €12/hour. | [StepStone Berlin](https://www.stepstone.de/gehalt/Werkstudent-in/city/Berlin.html), accessed 2026-10-24 (**verify**). Generic across Werkstudent roles, not PM-specific; the hourly conversion conflicts with the 2026 statutory minimum for covered employment. |
+| Junior Product Manager/in — Munich | €40,400 gross/year displayed average/“Mediangehalt” (range €35,400–€49,200). | [StepStone Munich](https://www.stepstone.de/gehalt/Junior-Product-Manager-in/city/Muenchen.html), accessed 2026-10-24 (**verify**). Role- and city-specific portal estimate; the page's text/label use average/median inconsistently and do not describe the sample. |
+| Junior-Produktmanager/in — Berlin | €40,500 gross/year displayed average/“Mediangehalt” (range €35,400–€46,700). | [StepStone Berlin](https://www.stepstone.de/gehalt/Junior-Produktmanager-in/city/Berlin.html), accessed 2026-10-24 (**verify**). Berlin comparison only; the page's text/label use average/median inconsistently and do not describe the sample. |
+
+These live portal estimates are orientation, not a guaranteed offer. Compare a student hourly rate with the statutory minimum and the actual hours/contract; do not infer a PM-specific student wage from the broad Werkstudent pages.
+
 The [StepStone Gehaltsreport 2026](https://www.stepstone.de/wp-content/uploads/2025/12/Stepstone_Gehaltsreport_2026.pdf) uses 1,326,157 full-time pay records collected Jan 2022–Nov 2025; its medians describe 2025, standardized to 40 hours and including bonuses. The role-specific StepStone pages above may use different estimates and are not personalized offers.
 
 A Job Drop Berlin snapshot on 2026-10-23 reported salary data on 17% of live Berlin startup roles (395/2,361); the denominator is listings carrying the field. General boards show roughly 8–17%, **(verify)**, not a national statistic. [Daily Drop figures/method](https://jobdropberlin.com/daily).

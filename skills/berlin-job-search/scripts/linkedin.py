@@ -12,12 +12,13 @@ from typing import Any, Optional
 from _common import (
     clean_html_fragment,
     json_text,
+    linkedin_location_and_geo_id,
     markdown_table,
     request_bytes,
     unescape_html,
     write_output,
 )
-from analyze_jd import analyze
+from analyze_jd import analyze, employment_type_from_title, seniority_from_title
 
 SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting"
@@ -171,14 +172,16 @@ def build_search_url(
     geo_id: Optional[str],
     page: int,
 ) -> str:
+    normalized_location, alias_geo_id = linkedin_location_and_geo_id(location)
     params = {
-        "location": location,
+        "location": normalized_location,
         "start": str((page - 1) * PAGE_SIZE),
     }
     if query:
         params["keywords"] = query
-    if geo_id:
-        params["geoId"] = geo_id
+    resolved_geo_id = geo_id or alias_geo_id
+    if resolved_geo_id:
+        params["geoId"] = resolved_geo_id
     if minutes is not None:
         params["f_TPR"] = "r{}".format(minutes * 60)
     elif days is not None:
@@ -323,6 +326,7 @@ def parse_job_detail(markup: str, job_id: str) -> dict[str, Any]:
         markup,
         re.I,
     )
+    title = _clean(title_match.group(1)) if title_match else "(untitled)"
     company_match = re.search(
         r'class="topcard__org-name-link[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)</a>',
         markup,
@@ -365,11 +369,11 @@ def parse_job_detail(markup: str, job_id: str) -> dict[str, Any]:
     description_text = description or ""
     function = criteria.get("job function")
     industries = criteria.get("industries")
-    seniority = criteria.get("seniority level")
-    employment = criteria.get("employment type")
+    seniority = seniority_from_title(title) or criteria.get("seniority level")
+    employment = employment_type_from_title(title) or criteria.get("employment type")
     return {
         "id": job_id,
-        "title": _clean(title_match.group(1)) if title_match else "(untitled)",
+        "title": title,
         "company": _clean(company_match.group(2)) if company_match else None,
         "company_url": _decode_entities(company_match.group(1)).split("?")[0] if company_match else None,
         "location": _clean(location_match.group(1)) if location_match else None,
@@ -387,7 +391,7 @@ def parse_job_detail(markup: str, job_id: str) -> dict[str, Any]:
             "industries": industries,
         },
         "is_active": bool(is_active),
-        "analysis": analyze(description_html or ""),
+        "analysis": analyze(description_html or "", title=title),
     }
 
 

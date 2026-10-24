@@ -24,6 +24,7 @@ from search import (
     dedup_key,
     deduplicate_jobs,
     dailyberlinjobs_query_term,
+    fetch_ba_source,
     fetch_dailyberlinjobs,
     filter_jobs,
     freehire_salary,
@@ -483,43 +484,142 @@ class SourceParsingTests(unittest.TestCase):
             self.assertEqual([job["company"] for job in only_unseen], ["Two"])
 
 
-class TitleMatchTests(unittest.TestCase):
-    def test_talent_acquisition_matches_any_query_term(self):
-        titles = [
-            "Talent Acquisition Manager",
-            "Head of Talent & Org Development",
-            "Working Student - Talent Acquisition",
-            "Senior Software Engineer",
-            "Staplerfahrer",
-        ]
-        kept = [title for title in titles if title_matches("Talent Acquisition", title)]
-        self.assertEqual(kept, titles[:3])
-
-    def test_recruiting_prefix_matches_recruiter_but_not_generic_manager(self):
-        self.assertTrue(title_matches("Recruiting Manager", "Recruiter (m/w/d)"))
-        self.assertFalse(title_matches("Recruiting Manager", "Senior Product Manager"))
-
-    def test_long_title_terms_use_bounded_word_prefixes(self):
-        self.assertTrue(title_matches("Pflegefachkraft", "Pflegefachkraft (m/w/d)"))
-        self.assertTrue(title_matches("Große Straße", "Grosse Strasse"))
-        self.assertTrue(title_matches("Fußpflege", "Fusspfleger"))
-        self.assertTrue(title_matches("Recruiting", "Recruiter"))
-        self.assertTrue(title_matches("Recruiting", "Recruitment Consultant"))
-        self.assertTrue(title_matches("Acquisition", "Talent Acquisition"))
-        self.assertTrue(title_matches("Personalreferent", "Personalreferent (m/w/d)"))
-        self.assertFalse(
-            title_matches(
-                "Personalreferent Recruiting",
-                "Senior Sales Manager / Key Account Manager in der Personalberatung",
+class CitySearchTests(unittest.TestCase):
+    def test_ba_uses_the_same_german_query_for_munich_aliases(self):
+        requests = []
+        for location in ("Munich", "München"):
+            args = Namespace(
+                what="Product Manager",
+                where=location,
+                radius=25,
+                days=14,
+                max_pages=1,
+                with_description=False,
             )
+            with patch.object(
+                search,
+                "request_json",
+                return_value={"ergebnisliste": [], "maxErgebnisse": 0},
+            ) as request:
+                jobs, errors = fetch_ba_source(args)
+            self.assertEqual(jobs, [])
+            self.assertEqual(errors, [])
+            requests.append(parse_qs(urlsplit(request.call_args.args[0]).query))
+
+        self.assertEqual(requests[0], requests[1])
+        self.assertEqual(requests[0]["wo"], ["München"])
+
+    def test_freehire_uses_canonical_english_city_aliases(self):
+        urls = []
+        for location in ("Munich", "München"):
+            args = Namespace(
+                what="Product Manager",
+                where=location,
+                days=14,
+                max_pages=1,
+                limit=10,
+                with_description=False,
+                remote=False,
+            )
+            with patch.object(
+                search,
+                "request_json",
+                return_value={"meta": {"total": 0}, "data": []},
+            ) as request:
+                jobs, errors = fetch_freehire(args)
+            self.assertEqual(jobs, [])
+            self.assertEqual(errors, [])
+            urls.append(parse_qs(urlsplit(request.call_args.args[0]).query))
+
+        self.assertEqual(urls[0], urls[1])
+        self.assertEqual(urls[0]["cities"], ["Munich"])
+
+    def test_local_filter_accepts_munich_results_labelled_munchen(self):
+        job = make_job(
+            "ba", "Product Manager", "Example GmbH", "München, Bayern",
+            "https://example.test/product-manager",
+        )
+        args = Namespace(
+            what="Product Manager",
+            where="Munich",
+            days=0,
+            remote=False,
+            english_only=False,
+            title_match=True,
         )
 
+        self.assertEqual(filter_jobs([job], args), [job])
+
+    def test_search_linkedin_uses_identical_munich_alias_parameters(self):
+        calls = []
+        for location in ("Munich", "München"):
+            args = Namespace(
+                where=location,
+                what="Product Manager",
+                days=14,
+                remote=False,
+                linkedin_pages=1,
+                limit=100,
+                with_description=False,
+            )
+            with patch("linkedin.search_jobs_with_errors", return_value=([], [])) as search_jobs:
+                jobs, errors = search.fetch_linkedin(args)
+            self.assertEqual(jobs, [])
+            self.assertEqual(errors, [])
+            calls.append(search_jobs.call_args.kwargs)
+
+        self.assertEqual(calls[0], calls[1])
+        self.assertEqual(calls[0]["location"], "Munich, Germany")
+        self.assertEqual(calls[0]["geo_id"], "100495942")
+
+    def test_daily_berlin_gate_uses_canonical_location(self):
+        self.assertTrue(is_daily_berlin_jobs_location("Berlin, Germany"))
+        self.assertFalse(is_daily_berlin_jobs_location("Munich"))
+        self.assertFalse(is_daily_berlin_jobs_location("München"))
+
+
+class TitleMatchTests(unittest.TestCase):
+    def test_title_matches_expected_phrases(self):
+        cases = (
+            ("Product Manager", "Senior Product Manager (m/w/d)", True),
+            ("Product Manager", "Product Managerin", True),
+            ("Product Manager", "Production Manager", False),
+            ("Product Manager", "Product Reviewer", False),
+            ("Product Owner", "Product Owner – Payments", True),
+            ("Product Owner", "Business Owner", False),
+            ("Business Analyst", "Business Analyst Celonis", True),
+            ("Business Analyst", "Cyber Security Analyst", False),
+            ("Talent Acquisition", "Talent Acquisition Manager", True),
+            ("Talent Acquisition", "Working Student - Talent Acquisition", True),
+            ("Talent Acquisition", "Head of Talent & Org Development", False),
+            ("Recruiter", "Recruiter:in Produktion & Logistik", True),
+            ("Recruiter", "Senior Recruiter (m/w/d)", True),
+            ("Personalreferent", "Personalreferent:in Recruiting", True),
+            ("Personalreferent", "Personalberatung Sales Manager", False),
+            ("Pflegefachkraft", "Pflegefachkräfte (m/w/d)", True),
+            ("Werkstudent Product Management", "Working Student Product Management", True),
+            ("Talent Partner", "Senior Talent Acquisition Partner", True),
+            ("Product Manager", "Product Marketing Manager", True),
+            ("Personalreferent Recruiting", "Personalreferent:in Recruiting und Support", True),
+            ("Product Manager", "Product Lead and Manager of Ops", False),
+        )
+        for query, title, expected in cases:
+            with self.subTest(query=query, title=title):
+                self.assertEqual(title_matches(query, title), expected)
+
+    def test_compounds_and_normalized_german_tokens(self):
+        self.assertTrue(title_matches("Produkt Manager", "Produktmanagerin"))
+        self.assertTrue(title_matches("Große Straße", "Grosse Strasse"))
+        self.assertTrue(title_matches("Fußpflege", "Fusspfleger"))
+        self.assertEqual(title_match_terms("AI Product Manager"), (["ai", "product", "manager"], False))
+
     def test_all_generic_query_falls_back_to_the_full_phrase(self):
-        terms, fallback = title_match_terms("Senior Manager")
-        self.assertEqual(terms, ["senior manager"])
+        terms, fallback = title_match_terms("Senior")
+        self.assertEqual(terms, ["senior"])
         self.assertTrue(fallback)
-        self.assertTrue(title_matches("Senior Manager", "Senior Manager (Berlin)"))
-        self.assertFalse(title_matches("Senior Manager", "Manager of Senior Products"))
+        self.assertTrue(title_matches("Senior", "Senior Product Manager"))
+        self.assertFalse(title_matches("Senior", "Manager of Products"))
+        self.assertEqual(title_match_terms("Senior Manager"), (["manager"], False))
 
     def test_title_match_is_opt_in_and_reports_dropped_jobs(self):
         jobs = [
@@ -542,18 +642,18 @@ class TitleMatchTests(unittest.TestCase):
         self.assertEqual([job["title"] for job in filtered["jobs"]], ["Talent Acquisition Manager"])
         self.assertEqual(filtered["meta"]["title_filtered"], 1)
 
-    def test_title_match_replaces_all_word_gate_for_ats(self):
+    def test_title_match_requires_the_product_owner_phrase_for_ats(self):
         jobs = [
-            make_job("ats", "Recruiter (m/w/d)", "Example A", "Berlin", "https://example.test/recruiter"),
-            make_job("ats", "Senior Product Manager", "Example B", "Berlin", "https://example.test/product"),
+            make_job("ats", "Product Owner (m/w/d)", "Example A", "Berlin", "https://example.test/product-owner"),
+            make_job("ats", "Business Owner", "Example B", "Berlin", "https://example.test/business-owner"),
         ]
         with patch.dict(SOURCE_FETCHERS, {"ats": lambda _args: (jobs, [])}):
             result = run_search({
-                "what": "Recruiting Manager", "where": "Berlin", "days": 0,
+                "what": "Product Owner", "where": "Berlin", "days": 0,
                 "sources": "ats", "title_match": True,
             })
 
-        self.assertEqual([job["title"] for job in result["jobs"]], ["Recruiter (m/w/d)"])
+        self.assertEqual([job["title"] for job in result["jobs"]], ["Product Owner (m/w/d)"])
         self.assertEqual(result["meta"]["title_filtered"], 1)
 
     def test_cli_title_match_prints_one_filter_summary_line(self):

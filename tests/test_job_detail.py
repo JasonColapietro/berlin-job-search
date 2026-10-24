@@ -66,6 +66,33 @@ class JobDetailTests(unittest.TestCase):
         )
         self.assertIsNone(detail["base_salary"])
 
+    def test_jsonld_title_overrides_conflicting_employment_type_and_description_level(self):
+        student = jsonld_detail(
+            {
+                "@type": "JobPosting",
+                "title": "Working Student Product Management",
+                "hiringOrganization": {"name": "Example Health Software"},
+                "employmentType": "FULL_TIME",
+                "description": "This full-time opportunity welcomes internship experience.",
+            },
+            "https://jobs.example/student-product",
+        )
+        self.assertEqual(student["employment_type"], "werkstudent")
+        self.assertEqual(student["analysis"]["employment_type"], ["werkstudent"])
+        self.assertEqual(student["analysis"]["seniority"], "student")
+
+        junior = jsonld_detail(
+            {
+                "@type": "JobPosting",
+                "title": "Junior Product Manager",
+                "hiringOrganization": {"name": "Example Health Software"},
+                "employmentType": "FULL_TIME",
+                "description": "Internship experience may count toward the requirement.",
+            },
+            "https://jobs.example/junior-product",
+        )
+        self.assertEqual(junior["analysis"]["seniority"], "junior")
+
     def test_linkedin_detail_passes_title_and_employer_to_analysis(self):
         posting = {
             "title": "Recruiter with German",
@@ -81,6 +108,23 @@ class JobDetailTests(unittest.TestCase):
         self.assertEqual(detail["analysis"]["german_evidence"], ["Recruiter with German"])
         self.assertTrue(detail["analysis"]["agency_or_temp"])
         self.assertEqual(detail["analysis"]["integrity"], {"ok": True, "issues": []})
+
+    def test_linkedin_student_title_overrides_full_time_metadata(self):
+        posting = {
+            "title": "Working Student Product Management",
+            "company": "Example Health Software",
+            "location": "Munich, Germany",
+            "employment_type": "Full-time",
+            "description": "A full-time posting with flexible student hours.",
+            "analysis": {"integrity": {"ok": True, "issues": []}},
+        }
+        with patch.object(job_detail, "fetch_linkedin_job_detail", return_value=posting), \
+                patch.object(job_detail, "warn_tos"):
+            detail = job_detail.linkedin_detail("https://www.linkedin.com/jobs/view/123")
+
+        self.assertEqual(detail["employment_type"], "werkstudent")
+        self.assertEqual(detail["analysis"]["employment_type"], ["werkstudent"])
+        self.assertEqual(detail["analysis"]["seniority"], "student")
 
     def test_daily_berlin_jobs_ats_paths_use_json_detail_and_integrity(self):
         record = json.loads((Path(__file__).parent / "fixtures" / "dbj_detail_ats.json").read_text(encoding="utf-8"))

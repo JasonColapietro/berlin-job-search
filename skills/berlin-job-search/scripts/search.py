@@ -14,9 +14,14 @@ from typing import Any, Optional
 
 from _common import (
     USER_AGENT,
+    ba_location_name,
     canonical_url,
+    canonical_location_name,
+    city_alias,
+    city_location_matches,
     csv_text,
     json_text,
+    linkedin_location_and_geo_id,
     normalize_identity as normalized_key,
     plain,
     request_bytes,
@@ -25,15 +30,15 @@ from _common import (
     source_date as iso_date,
     write_output,
 )
-from analyze_jd import analyze
+from analyze_jd import analyze, employment_type_from_title
 
 DEFAULT_COMPANIES = Path(__file__).resolve().parent.parent / "assets" / "companies.json"
 DEFAULT_SOURCES = ("dailyberlinjobs", "ba", "arbeitnow", "ats", "linkedin")
 TITLE_MATCH_STOP_WORDS = frozenset({
-    "manager", "senior", "junior", "lead", "head", "specialist", "associate", "partner",
-    "consultant", "assistant", "mitarbeiter", "mitarbeiterin", "intern", "internship",
-    "werkstudent", "working", "student", "praktikant", "praktikum", "gn", "mwd", "all",
-    "genders", "the", "and", "with", "for", "und", "mit", "fur",
+    "senior", "junior", "sr", "jr", "lead", "head", "principal", "werkstudent",
+    "werkstudentin", "working", "student", "intern", "internship", "praktikant",
+    "praktikantin", "praktikum", "trainee", "the", "of", "and", "und", "for",
+    "fur", "mit", "with", "gn", "mwd", "mfd", "all", "genders",
 })
 TITLE_MATCH_FOLD = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
@@ -43,19 +48,20 @@ def make_job(
     remote: Any = None, employment_type: Any = None, salary: Any = None,
     description: Any = None, include_description: bool = False, job_id: Any = None,
 ) -> dict[str, Any]:
+    title_text = plain(title)
     raw_description = str(description or "")
     text = plain(raw_description)
     analysis = analyze(raw_description) if raw_description else {}
     record = {
         "id": str(job_id or url or "{}|{}|{}".format(source, company, title)),
         "source": source,
-        "title": plain(title),
+        "title": title_text,
         "company": plain(company),
         "location": plain(location),
         "remote": remote if isinstance(remote, bool) else None,
         "url": str(url or ""),
         "posted": iso_date(posted),
-        "employment_type": plain(employment_type) or None,
+        "employment_type": employment_type_from_title(title_text) or plain(employment_type) or None,
         "salary": salary_text(salary),
         "ad_language": analysis.get("ad_language", "unknown"),
         "german_required": analysis.get("german_required", "unknown"),
@@ -444,7 +450,7 @@ def mark_seen_jobs(
 def filter_jobs(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[dict[str, Any]]:
     cutoff = dt.date.today() - dt.timedelta(days=args.days) if args.days else None
     query_words = [word.casefold() for word in re.findall(r"\w+", args.what)]
-    city = (args.where or "").casefold().strip()
+    city = args.where or ""
     filtered = []
     for job in jobs:
         if args.remote and job.get("remote") is not True:
@@ -460,7 +466,7 @@ def filter_jobs(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[di
         if city:
             location = (job.get("location") or "").casefold()
             broad_remote = args.remote and any(token in location for token in ("germany", "remote", "deutschland"))
-            if city not in location and not broad_remote:
+            if not city_location_matches(city, job.get("location")) and not broad_remote:
                 continue
         if not getattr(args, "title_match", False):
             title_terms = re.findall(r"\w+", (job.get("title") or "").casefold())
@@ -482,6 +488,8 @@ def filter_jobs(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[di
 
 def title_words(value: Any) -> list[str]:
     normalized = str(value or "").casefold().translate(TITLE_MATCH_FOLD)
+    normalized = re.sub(r"(?<!\w)m\s*/\s*w\s*/\s*d(?!\w)", " mwd ", normalized)
+    normalized = re.sub(r"(?<!\w)m\s*/\s*f\s*/\s*d(?!\w)", " mfd ", normalized)
     words = []
     current = []
     for char in normalized:
@@ -497,32 +505,42 @@ def title_words(value: Any) -> list[str]:
 
 def title_match_terms(query: str) -> tuple[list[str], bool]:
     words = title_words(query)
-    terms = [
-        word for word in words
-        if len(word) >= 3 and word not in TITLE_MATCH_STOP_WORDS
-    ]
+    terms = [word for word in words if word not in TITLE_MATCH_STOP_WORDS]
     if terms:
         return terms, False
     phrase = " ".join(words)
     return ([phrase] if phrase else []), True
 
 
+TITLE_GENDER_SUFFIXES = frozenset({"in", "innen"})
+
+
+def _phrase_at(words: list[str], phrase: list[str], start: int) -> bool:
+    position = start
+    for offset, term in enumerate(phrase):
+        last = offset == len(phrase) - 1
+        for candidate in range(position, min(len(words), position + (1 if offset == 0 else 2))):
+            word = words[candidate]
+            if word.startswith(term) if last else word == term:
+                position = candidate + 1
+                break
+        else:
+            return False
+    return True
+
+
 def title_matches(query: str, title: Any) -> bool:
     terms, phrase_fallback = title_match_terms(query)
-    words = title_words(title)
+    words = [word for word in title_words(title) if word not in TITLE_GENDER_SUFFIXES]
     if not terms or not words:
         return False
-    if phrase_fallback:
-        phrase = terms[0].split()
-        return any(
-            words[index:index + len(phrase)] == phrase
-            for index in range(len(words) - len(phrase) + 1)
-        )
-    return any(
-        any(word.startswith(term[:max(6, len(term) - 3)]) for word in words)
-        if len(term) >= 7 else term in words
-        for term in terms
-    )
+    phrase = terms[0].split() if phrase_fallback else terms
+    if any(_phrase_at(words, phrase, index) for index in range(len(words))):
+        return True
+    if len(phrase) > 1:
+        joined = "".join(phrase)
+        return any(word.startswith(joined) for word in words)
+    return False
 
 
 def freehire_salary(enrichment: dict[str, Any]) -> Optional[str]:
@@ -578,7 +596,10 @@ def validate_dbj_filter_values(value: Optional[str], allowed: list[str], option:
 
 
 def is_daily_berlin_jobs_location(where: Optional[str]) -> bool:
-    return not where or "berlin" in where.casefold()
+    if not where:
+        return True
+    alias = city_alias(where)
+    return bool(alias and alias["key"] == "berlin")
 
 
 def parse_dailyberlinjobs(payload: dict[str, Any], include_description: bool = False) -> list[dict[str, Any]]:
@@ -689,7 +710,7 @@ def fetch_freehire(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
     include_description = args.with_description
     endpoint = "/api/v1/agent/jobs/search" if include_description else "/api/v1/jobs/search"
     page_size = min(args.limit, 100)
-    city = (args.where or "").split(",", 1)[0].strip()
+    city = canonical_location_name(args.where)
     jobs = []
     errors = []
     for page in range(args.max_pages):
@@ -731,7 +752,7 @@ def fetch_freehire(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
                     broad_remote = args.remote and remote is True and any(
                         token in location for token in ("germany", "deutschland", "remote")
                     )
-                    if city.casefold() not in location and not broad_remote:
+                    if not city_location_matches(args.where, job.get("location")) and not broad_remote:
                         continue
                 jobs.append(job)
         except Exception as error:
@@ -786,13 +807,15 @@ def fetch_linkedin(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
         search_jobs_with_errors as search_linkedin_jobs,
     )
 
+    location, geo_id = linkedin_location_and_geo_id(args.where or "Germany")
     cards, errors = search_linkedin_jobs(
-        location=args.where or "Germany",
+        location=location,
         query=args.what,
         days=args.days if args.days > 0 else None,
         remote="remote" if args.remote else None,
         pages=args.linkedin_pages,
         limit=args.limit,
+        geo_id=geo_id,
     )
     jobs = []
     detail_failed = False
@@ -849,7 +872,7 @@ def fetch_ba_source(args: argparse.Namespace) -> tuple[list[dict[str, Any]], lis
             "page": str(page),
         }
         if args.where:
-            params.update({"wo": args.where, "umkreis": str(args.radius)})
+            params.update({"wo": ba_location_name(args.where), "umkreis": str(args.radius)})
         url = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs?" + urllib.parse.urlencode(params)
         try:
             payload = request_json(url, headers={"X-API-Key": "jobboerse-jobsuche"})
@@ -1074,7 +1097,7 @@ def main() -> int:
     parser.add_argument("--remote", action="store_true", help="Keep explicitly remote postings")
     parser.add_argument("--english-only", action="store_true", help="Drop ads where German is required")
     parser.add_argument("--title-match", action="store_true",
-                        help="Keep jobs whose title matches any normalized query term")
+                        help="Keep jobs whose title matches the normalized query phrase")
     parser.add_argument("--limit", type=int, default=100, help="Maximum number of output jobs (default: 100)")
     parser.add_argument("--max-pages", type=int, default=3,
                         help="Maximum pages for BA, Arbeitnow, and Freehire (default: 3)")

@@ -3,14 +3,17 @@ seniority: ""
 locations:
   cities: []
   radius_km: 25
-  relocate: false
-remote_preference: "hybrid"
+  relocate: null # true | false (confirm)
+remote_preference: null # remote | hybrid | onsite | any (confirm)
 citizenship: null # eu | non_eu | other (null = unknown)
 residence_permit: ""
 german_level: "" # CEFR: A1-C2
 english_level: "" # CEFR: A1-C2
 min_salary_gross_annual: null
 employment_types: []
+student:
+  graduation: null # expected YYYY-MM or YYYY-MM-DD
+  wants: null # werkstudent | full_time | both
 industries_include: []
 industries_exclude: []
 company_size: ""
