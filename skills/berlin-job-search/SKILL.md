@@ -5,7 +5,7 @@ license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:
   author: umutyesildal
-  version: "0.1.1"
+  version: "0.1.2"
   data-as-of: "2026-10"
 ---
 
