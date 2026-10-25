@@ -22,6 +22,7 @@ from _common import (
     csv_text,
     json_text,
     linkedin_location_and_geo_id,
+    markdown_table,
     normalize_identity as normalized_key,
     plain,
     request_bytes,

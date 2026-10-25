@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/umutyesildal/berlin-job-search)](https://skills.sh/umutyesildal/berlin-job-search)
 
-![Fictional CV and application dashboard](docs/images/hero.png)
+![Demo: searching Berlin recruiter jobs and checking whether German is required](docs/images/demo.gif)
 
 Job hunting in Germany has rules nobody writes down:
 
@@ -74,6 +74,8 @@ git clone https://github.com/umutyesildal/berlin-job-search.git && cd berlin-job
 *Example output with fictional employers.*
 
 ## What it does
+
+![Fictional CV and application dashboard](docs/images/hero.png)
 
 | Stage | You get |
 |---|---|

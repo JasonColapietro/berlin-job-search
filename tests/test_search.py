@@ -677,6 +677,34 @@ class TitleMatchTests(unittest.TestCase):
         filter_lines = [line for line in stderr.getvalue().splitlines() if line.startswith("title-match:")]
         self.assertEqual(filter_lines, ["title-match: dropped 1 job"])
 
+    def test_cli_markdown_format_renders_german_table_from_fictional_job(self):
+        jobs = [
+            make_job(
+                "ba",
+                "Recruiter",
+                "Example Talent Studio",
+                "Berlin",
+                "https://example.test/jobs/recruiter",
+                description="Sehr gute Deutschkenntnisse (C1), Englisch von Vorteil.",
+                include_description=True,
+            ),
+        ]
+        stdout, stderr = io.StringIO(), io.StringIO()
+        argv = [
+            "search.py", "--what", "Recruiter", "--where", "Berlin",
+            "--days", "0", "--sources", "ba", "--title-match", "--with-description",
+            "--format", "md",
+        ]
+        with patch.dict(SOURCE_FETCHERS, {"ba": lambda _args: (jobs, [])}), \
+                patch.object(sys, "argv", argv), \
+                contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            self.assertEqual(search.main(), 0)
+
+        output = stdout.getvalue()
+        self.assertIn("| Title | Company | Location |", output)
+        self.assertIn("| Recruiter | Example Talent Studio | Berlin", output)
+        self.assertIn("| required | ba |", output)
+
 
 if __name__ == "__main__":
     unittest.main()
