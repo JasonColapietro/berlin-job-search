@@ -1,6 +1,6 @@
 ---
 name: berlin-job-search
-description: Job-search coach for Berlin and the rest of Germany. Searches live postings through keyless sources (Bundesagentur für Arbeit, Arbeitnow, LinkedIn guest jobs, plus Daily Berlin Jobs and company ATS boards for Berlin tech roles) and browser recipes for StepStone, Indeed, XING and hiring.cafe; checks German-language requirements, Blue Card salary thresholds and fit; writes a German Lebenslauf/Anschreiben or English CV as PDF; runs mock interviews; tracks applications and follow-ups; explains visas, salaries, contracts and unemployment support. Use when the user wants a job in Germany or a German city, mentions Jobsuche, Stellenanzeige, Bewerbung, Lebenslauf, Werkstudent, Ausbildung, Blue Card, Chancenkarte, Arbeitslosengeld or jobs without German, or asks to search, evaluate or apply to jobs in Germany.
+description: "Job-search coach for Berlin and all of Germany (Jobsuche, Bewerbung): finds live jobs, checks German and Blue Card requirements, writes Lebenslauf/CV, mock interviews, tracks applications."
 license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:
