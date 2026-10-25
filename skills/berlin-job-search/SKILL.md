@@ -1,6 +1,6 @@
 ---
 name: berlin-job-search
-description: "Job-search coach for Berlin and all of Germany (Jobsuche, Bewerbung): finds live jobs, checks German and Blue Card requirements, writes Lebenslauf/CV, mock interviews, tracks applications."
+description: "Use when searching for jobs in Berlin or Germany, checking German and Blue Card requirements, preparing a Lebenslauf/CV, practising interviews, or tracking applications."
 license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:

@@ -44,6 +44,12 @@ TITLE_MATCH_STOP_WORDS = frozenset({
 TITLE_MATCH_FOLD = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
 
+def merge_integrity(*results):
+    findings = [result for result in results if isinstance(result, dict)]
+    return {"ok": all(result.get("ok", True) for result in findings),
+            "issues": [issue for result in findings for issue in result.get("issues", [])]}
+
+
 def make_job(
     source: str, title: Any, company: Any, location: Any, url: Any, posted: Any = None,
     remote: Any = None, employment_type: Any = None, salary: Any = None,
@@ -66,6 +72,7 @@ def make_job(
         "salary": salary_text(salary),
         "ad_language": analysis.get("ad_language", "unknown"),
         "german_required": analysis.get("german_required", "unknown"),
+        "integrity": analysis.get("integrity", {"ok": True, "issues": []}),
     }
     if include_description:
         record["description"] = text[:4000]
@@ -402,7 +409,12 @@ def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 -index,
             ),
         )
-        unique.append(jobs[winner])
+        selected = dict(jobs[winner])
+        findings = [job.get("integrity") for job in (jobs[i] for i in indexes)]
+        flagged = [result for result in findings if result and not result.get("ok", True)]
+        if flagged:
+            selected["integrity"] = {"ok": False, "issues": [issue for result in flagged for issue in result.get("issues", [])]}
+        unique.append(selected)
     return unique
 
 
@@ -683,7 +695,9 @@ def fetch_dailyberlinjobs(
         for item, job in zip(payload["jobs"], page_jobs):
             if args.with_description and job.get("via") == "ats" and detail_requests < 10:
                 detail_requests += 1
-                detail_url = job.get("detail_url")
+                identifier = str(item.get("id") or "")
+                detail_url = (base_url + "/api/v1/jobs/" + identifier
+                              if re.fullmatch(r"[0-9]+", identifier) else None)
                 if detail_url:
                     try:
                         detail = request_json(str(detail_url))
@@ -691,6 +705,7 @@ def fetch_dailyberlinjobs(
                         if isinstance(raw_description, str) and raw_description.strip():
                             analysis = analyze(raw_description)
                             job["description"] = plain(raw_description)[:4000]
+                            job["integrity"] = merge_integrity(job.get("integrity"), analysis.get("integrity"))
                             job["ad_language"] = analysis["ad_language"]
                             job["german_required"] = analysis["german_required"]
                             job["employment_type"] = plain(detail.get("employment_type")) or None
@@ -843,6 +858,8 @@ def fetch_linkedin(args: argparse.Namespace) -> tuple[list[dict[str, Any]], list
             item.get("date"), remote, employment_type, salary, description,
             include_description=include_description, job_id=item.get("id"),
         )
+        if include_description:
+            job["integrity"] = merge_integrity(job.get("integrity"), (detail.get("analysis") or {}).get("integrity"))
         if args.with_description and not include_description:
             job["description"] = None
         jobs.append(job)
@@ -963,7 +980,9 @@ def format_markdown(jobs: list[dict[str, Any]], statuses: dict[str, dict[str, An
         rows,
     )
     statuses_text = "\n".join("- " + source_status_line(source, status) for source, status in statuses.items())
-    return table + "\n\n" + statuses_text
+    warnings = ["Integrity warning: posting {} requires review.".format(index + 1)
+                for index, job in enumerate(jobs) if not job.get("integrity", {}).get("ok", True)]
+    return table + "\n\n" + statuses_text + ("\n\n" + "\n".join(warnings) if warnings else "")
 
 
 def run_search(params: dict[str, Any]) -> dict[str, Any]:
@@ -1129,15 +1148,20 @@ def main() -> int:
     if args.format == "json":
         output = json_text(result)
     elif args.format == "csv":
-        fields = ["id", "source", "title", "company", "location", "remote", "url", "posted", "employment_type", "salary", "ad_language", "german_required", "new"]
+        fields = ["id", "source", "title", "company", "location", "remote", "url", "posted", "employment_type", "salary", "ad_language", "german_required", "new", "integrity_ok", "integrity_issues"]
         if args.with_description:
             fields.append("description")
-        output = csv_text(jobs, fields)
+        csv_jobs = [{**job, "integrity_ok": job.get("integrity", {}).get("ok", True),
+                     "integrity_issues": json_text(job.get("integrity", {}).get("issues", []), indent=None)} for job in jobs]
+        output = csv_text(csv_jobs, fields)
     else:
         output = format_markdown(jobs, statuses)
     write_output(output, args.out)
     for source, status in statuses.items():
         print(source_status_line(source, status), file=sys.stderr)
+    for index, job in enumerate(jobs):
+        if not job.get("integrity", {}).get("ok", True):
+            print("Integrity warning: posting {} requires review.".format(index + 1), file=sys.stderr)
     if args.title_match:
         count = result["meta"]["title_filtered"]
         print("title-match: dropped {} job{}".format(count, "" if count == 1 else "s"), file=sys.stderr)

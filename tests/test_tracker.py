@@ -54,7 +54,7 @@ class TrackerCliTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         identifier = rows[0]["id"]
         self.assertEqual(rows[0]["status"], "saved")
-        self.assertEqual(len(rows[0]), 15)
+        self.assertEqual(rows[0]["_csv_encoding"], "spreadsheet-v1")
 
         duplicate = self.run_cli(
             "add", "--company", "Example GmbH", "--title", "Engineer",
@@ -142,8 +142,8 @@ class TrackerCliTests(unittest.TestCase):
         tracker.write_rows(path, rows)
         with path.open(newline="", encoding="utf-8") as stream:
             reader = csv.DictReader(stream)
-            self.assertEqual(reader.fieldnames, tracker.FIELDS)
-            self.assertEqual(len(next(reader)), len(tracker.FIELDS))
+            self.assertEqual(reader.fieldnames, tracker.FIELDS + ["_csv_encoding"])
+            self.assertEqual(len(next(reader)), len(tracker.FIELDS) + 1)
 
     def test_event_updates_state_dates_and_followup_count(self):
         path = self.data_dir / "tracker.csv"

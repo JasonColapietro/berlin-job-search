@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import csv
+import http.client
+import ipaddress
+import socket
 import datetime as dt
 import html
 import io
@@ -210,6 +213,70 @@ def plain(value: Any) -> str:
     return "" if value is None else strip_html(html.unescape(str(value)))
 
 
+MAX_RESPONSE_BYTES = 2_000_000
+MAX_REDIRECTS = 5
+
+
+def _is_public_address(value: str) -> bool:
+    address = ipaddress.ip_address(value)
+    return address.is_global and not address.is_multicast and not address.is_reserved
+
+
+def public_url(url: str):
+    """Validate syntax before opening any connection (including redirects)."""
+    if not url or any(ord(c) <= 32 or ord(c) == 127 for c in url):
+        raise ValueError("Public HTTP(S) URL required")
+    parsed = urllib.parse.urlsplit(url)
+    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None
+            or "%" in parsed.hostname or "\\" in parsed.netloc):
+        raise ValueError("Public HTTP(S) URL without credentials required")
+    port = parsed.port
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("Invalid URL port")
+    try:
+        address = ipaddress.ip_address(parsed.hostname)
+    except ValueError:
+        address = None
+    if address is not None and not _is_public_address(str(address)):
+        raise ValueError("Non-public destination refused")
+    return parsed
+
+
+def _public_socket(host: str, port: int, timeout: float):
+    # Resolve once, validate every answer, then connect to a numeric address.
+    # Keeping DNS out of the actual connect prevents a second-resolution rebind.
+    answers = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not answers or any(not _is_public_address(a[4][0]) for a in answers):
+        raise ValueError("Non-public destination refused")
+    last_error = None
+    for family, socktype, protocol, _, address in answers:
+        connection = socket.socket(family, socktype, protocol)
+        try:
+            connection.settimeout(timeout)
+            connection.connect(address)
+            return connection
+        except OSError as error:
+            connection.close()
+            last_error = error
+    raise last_error or OSError("No public destination available")
+
+
+class _PublicHTTPConnection(http.client.HTTPConnection):
+    def connect(self):
+        self.sock = _public_socket(self.host, self.port, self.timeout)
+
+
+class _PublicHTTPSConnection(http.client.HTTPSConnection):
+    def connect(self):
+        connection = _public_socket(self.host, self.port, self.timeout)
+        try:
+            self.sock = self._context.wrap_socket(connection, server_hostname=self.host)
+        except Exception:
+            connection.close()
+            raise
+
+
 def request_bytes(
     url: str,
     *,
@@ -219,12 +286,33 @@ def request_bytes(
     request_headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*"}
     if headers:
         request_headers.update(headers)
-    request = urllib.request.Request(url, headers=request_headers)
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.status, response.read()
-    except urllib.error.HTTPError as error:
-        return error.code, error.read()
+    for redirect in range(MAX_REDIRECTS + 1):
+        parsed = public_url(url)
+        cls = _PublicHTTPSConnection if parsed.scheme == "https" else _PublicHTTPConnection
+        connection = cls(parsed.hostname, parsed.port, timeout=timeout)
+        try:
+            target = urllib.parse.urlunsplit(("", "", parsed.path or "/", parsed.query, ""))
+            connection.request("GET", target, headers=request_headers)
+            response = connection.getresponse()
+            if response.status in {301, 302, 303, 307, 308}:
+                location = response.getheader("Location")
+                if not location or redirect == MAX_REDIRECTS:
+                    raise ValueError("Missing redirect target or too many redirects")
+                next_url = urllib.parse.urljoin(url, location)
+                next_parsed = public_url(next_url)
+                if parsed.scheme == "https" and next_parsed.scheme != "https":
+                    raise ValueError("HTTPS downgrade refused")
+                if (parsed.scheme, parsed.hostname, parsed.port) != (next_parsed.scheme, next_parsed.hostname, next_parsed.port):
+                    request_headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*"}
+                url = next_url
+                continue
+            body = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(body) > MAX_RESPONSE_BYTES:
+                raise ValueError("Response exceeds size limit")
+            return response.status, body
+        finally:
+            connection.close()
+    raise ValueError("Too many redirects")
 
 
 def request_json(url: str, *, headers: Optional[dict[str, str]] = None) -> Any:
@@ -304,11 +392,17 @@ def json_text(value: Any, *, indent: Optional[int] = 2, sort_keys: bool = False)
     return json.dumps(value, ensure_ascii=False, indent=indent, sort_keys=sort_keys)
 
 
+def spreadsheet_cell(value: Any) -> Any:
+    if isinstance(value, str) and (value.startswith("'") or value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n"))):
+        return "'" + value
+    return value
+
+
 def csv_text(rows: list[dict[str, Any]], fields: list[str]) -> str:
     stream = io.StringIO()
     writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows({key: spreadsheet_cell(value) for key, value in row.items()} for row in rows)
     return stream.getvalue()
 
 
