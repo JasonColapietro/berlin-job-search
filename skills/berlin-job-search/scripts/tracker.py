@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Optional
 
-from _common import canonical_url, csv_text, json_text, markdown_table, parse_date_or_none, slugify
+from _common import canonical_url, csv_text, json_text, markdown_table, parse_date_or_none, slugify, spreadsheet_cell
 
 FIELDS = [
     "id", "date_added", "company", "title", "url", "location", "source", "status",
@@ -72,12 +72,21 @@ def read_rows(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
     with path.open(newline="", encoding="utf-8") as stream:
-        return [normalized_row(row) for row in csv.DictReader(stream)]
+        rows = []
+        for row in csv.DictReader(stream):
+            for key, value in row.items():
+                # Decode only the exact escape emitted by spreadsheet_cell;
+                # historical ordinary apostrophes remain untouched.
+                if row.get("_csv_encoding") == "spreadsheet-v1" and isinstance(value, str) and value.startswith("'"):
+                    if spreadsheet_cell(value[1:]) == value:
+                        row[key] = value[1:]
+            rows.append(normalized_row(row))
+        return rows
 
 
 def write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    text = csv_text([normalized_row(row) for row in rows], FIELDS)
+    text = csv_text([{**normalized_row(row), "_csv_encoding": "spreadsheet-v1"} for row in rows], FIELDS + ["_csv_encoding"])
     with path.open("w", newline="", encoding="utf-8") as stream:
         stream.write(text)
 

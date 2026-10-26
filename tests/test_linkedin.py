@@ -127,5 +127,54 @@ class LinkedInParsingTests(unittest.TestCase):
         self.assertEqual(errors, ["page 2: page two timed out"])
 
 
+class LinkedInNetworkTests(unittest.TestCase):
+    def test_transport_errors_become_linkedin_request_errors(self):
+        import socket
+        import urllib.error
+        import linkedin
+        for error in (socket.gaierror('DNS unavailable'), OSError('connection failed'),
+                      TimeoutError('timed out'), urllib.error.URLError('unreachable')):
+            with self.subTest(error=type(error).__name__), patch('linkedin._pace'), \
+                    patch('linkedin.request_bytes', side_effect=error):
+                with self.assertRaisesRegex(LinkedInRequestError, 'Could not reach LinkedIn') as caught:
+                    linkedin.fetch_html('https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search')
+                self.assertIs(caught.exception.__cause__, error)
+                self.assertIn(str(getattr(error, 'reason', error)), str(caught.exception))
+
+    def test_cli_handles_raw_network_errors_for_search_and_detail(self):
+        import contextlib
+        import io
+        import json
+        import socket
+        import linkedin
+        for args, target in ((['search', '--location', 'Berlin'], 'search_jobs'),
+                             (['detail', '1234567890'], 'fetch_job_detail')):
+            for error in (OSError('connection failed'), socket.gaierror('DNS unavailable')):
+                stderr = io.StringIO()
+                with self.subTest(args=args, error=type(error).__name__), \
+                        patch.object(sys, 'argv', ['linkedin.py'] + args), \
+                        patch.object(linkedin, target, side_effect=error), \
+                        contextlib.redirect_stderr(stderr):
+                    self.assertEqual(linkedin.main(), 1)
+                output = stderr.getvalue()
+                self.assertNotIn('Traceback', output)
+                result = json.loads(output.splitlines()[-1])
+                self.assertEqual(result['code'], 'LINKEDIN_FAILED')
+                self.assertIn(str(error), result['error'])
+
+    def test_later_dns_failure_retains_successful_search_page(self):
+        import socket
+        with patch('linkedin._pace'), patch('linkedin.request_bytes', side_effect=[
+            (200, b'page-one'), socket.gaierror('DNS unavailable'),
+        ]), patch('linkedin.parse_job_cards', return_value=[
+            {'id': str(index), 'title': 'Engineer', 'location': 'Berlin'}
+            for index in range(10)
+        ]):
+            results, errors = search_jobs_with_errors('Berlin', pages=2, limit=20)
+        self.assertEqual(len(results), 10)
+        self.assertEqual(len(errors), 1)
+        self.assertIn('page 2: Could not reach LinkedIn', errors[0])
+
+
 if __name__ == "__main__":
     unittest.main()
