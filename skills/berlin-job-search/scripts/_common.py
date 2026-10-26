@@ -213,7 +213,8 @@ def plain(value: Any) -> str:
     return "" if value is None else strip_html(html.unescape(str(value)))
 
 
-MAX_RESPONSE_BYTES = 2_000_000
+# Allow large public job boards while keeping every response bounded (20 MB).
+MAX_RESPONSE_BYTES = 20_000_000
 MAX_REDIRECTS = 5
 
 

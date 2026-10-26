@@ -136,6 +136,43 @@ class TransportTests(unittest.TestCase):
             self.exchange('http://public.test/jobs',
                 [b'HTTP/1.1 302 Found\r\nLocation: /jobs\r\nContent-Length: 0\r\n\r\n'] * 6)
 
+    def test_large_source_payloads_load_through_transport_and_parsers(self):
+        cases = [
+            ({'data': [{'title': 'Engineer', 'company_name': 'Example',
+                        'location': 'Berlin', 'url': 'https://example.test/job',
+                        'description': AD}], 'padding': ' ' * 2_500_000},
+             search.parse_arbeitnow),
+            ({'jobs': [{'id': 123, 'title': 'Engineer', 'location': {'name': 'Berlin'},
+                        'absolute_url': 'https://example.test/job', 'content': AD}],
+              'padding': ' ' * 3_700_000},
+             lambda payload: search.parse_greenhouse(payload, {'name': 'Example'})),
+        ]
+        for payload, parser in cases:
+            body = json.dumps(payload).encode()
+            with self.subTest(size=len(body)):
+                response = b'HTTP/1.1 200 OK\r\nContent-Length: ' + str(len(body)).encode() + b'\r\n\r\n' + body
+                (_, received), _, _, _ = self.exchange('http://public.test/jobs', [response])
+                jobs = parser(json.loads(received))
+                self.assertEqual(len(jobs), 1)
+                self.assertEqual(jobs[0]['title'], 'Engineer')
+                self.assertFalse(jobs[0]['integrity']['ok'])
+
+    def test_twenty_mb_boundary_with_and_without_content_length(self):
+        self.assertEqual(_common.MAX_RESPONSE_BYTES, 20_000_000)
+        for declared_length in (True, False):
+            for size in (20_000_000, 20_000_001):
+                with self.subTest(declared_length=declared_length, size=size):
+                    header = b'HTTP/1.1 200 OK\r\n'
+                    if declared_length:
+                        header += b'Content-Length: ' + str(size).encode() + b'\r\n'
+                    response = header + b'\r\n' + b'x' * size
+                    if size > 20_000_000:
+                        with self.assertRaisesRegex(ValueError, 'Response exceeds size limit'):
+                            self.exchange('http://public.test/jobs', [response])
+                    else:
+                        (_, body), _, _, _ = self.exchange('http://public.test/jobs', [response])
+                        self.assertEqual(len(body), size)
+
     def test_multicast_destination_is_not_public_job_host(self):
         with self.assertRaises(ValueError):
             self.exchange('http://224.0.0.1/jobs', [])

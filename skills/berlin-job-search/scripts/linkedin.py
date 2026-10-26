@@ -5,7 +5,6 @@ import random
 import re
 import sys
 import time
-import urllib.error
 import urllib.parse
 from typing import Any, Optional
 
@@ -90,8 +89,8 @@ def fetch_html(url: str, allow_not_found: bool = False) -> str:
                     "LinkedIn request failed after two retries: HTTP {}".format(status)
                 )
             raise LinkedInRequestError("LinkedIn request failed: HTTP {}".format(status))
-        except urllib.error.URLError as error:
-            raise LinkedInRequestError("Could not reach LinkedIn guest endpoint: {}".format(error.reason)) from error
+        except OSError as error:
+            raise LinkedInRequestError("Could not reach LinkedIn guest endpoint: {}".format(getattr(error, "reason", error))) from error
     raise LinkedInRequestError("LinkedIn request failed after two retries")
 
 
@@ -480,7 +479,7 @@ def main() -> int:
             output = json_text(job) if args.format == "json" else _detail_markdown(job)
         write_output(output)
         return 0
-    except (LinkedInRequestError, ValueError, urllib.error.URLError) as error:
+    except (LinkedInRequestError, ValueError, OSError) as error:
         print(json_text({"error": str(error), "code": "LINKEDIN_FAILED"}, indent=None), file=sys.stderr)
         return 1
 

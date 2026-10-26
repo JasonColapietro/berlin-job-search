@@ -1,6 +1,6 @@
 ---
 name: berlin-job-search
-description: "Use when searching for jobs in Berlin or Germany, checking German and Blue Card requirements, preparing a Lebenslauf/CV, practising interviews, or tracking applications."
+description: "Use when searching for jobs in Berlin or Germany, checking German and Blue Card requirements, preparing a Lebenslauf/CV, practising interviews, or tracking applications (Jobsuche, Bewerbung)."
 license: MIT
 compatibility: Scripts need Python 3.9+ (standard library only) and internet access. Portal recipes optionally use a browser automation tool.
 metadata:
