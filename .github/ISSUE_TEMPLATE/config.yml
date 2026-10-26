@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security issue privately
+    url: https://github.com/umutyesildal/berlin-job-search/security/advisories/new
+    about: Prompt injection, unsafe HTML or anything else that should not be public.

@@ -1,0 +1,29 @@
+name: Coverage request
+description: Add a city, company board, job source or field that the skill handles badly
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is missing?
+      options:
+        - City or region
+        - Company career board
+        - Job source or portal
+        - Field or job title (for example nursing, logistics, recruiting)
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Names, public URLs and an example search that returns poor results today.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to open a pull request for this myself (with or without an AI agent)

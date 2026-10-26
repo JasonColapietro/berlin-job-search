@@ -1,0 +1,29 @@
+name: Bug report
+description: A search, script or skill step does something wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Please use fictional data. Do not paste your CV, profile, tracker or private job-search records.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran or asked, what you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or prompt
+      description: For example `python3 search.py --what "Data Analyst" --where Hamburg --format md`.
+      render: shell
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      description: Claude Code, Codex, Claude Desktop, ChatGPT, other.
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS

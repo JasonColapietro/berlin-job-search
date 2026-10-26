@@ -157,8 +157,9 @@ your machine through the scripts, and nothing is sent to the author.
 
 ## Contributing
 
-Issues and pull requests are welcome, especially new company boards, cities and fields. See
-[CONTRIBUTING.md](CONTRIBUTING.md). The scripts are Python 3.9+ with the standard library only.
+Issues and pull requests are welcome, especially new company boards, cities and fields. PRs written
+with an AI agent are fine too. See [CONTRIBUTING.md](CONTRIBUTING.md). The scripts are Python 3.9+
+with the standard library only.
 
 ## Credits and license
 
